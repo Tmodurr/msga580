@@ -1,0 +1,46 @@
+
+#map-basemap-dropdown{
+    padding-top: 10px;
+    text-align: center;
+    display:block;
+}
+
+
+
+
+
+
+#map {
+    width: 800px;
+    height: 400px;
+    
+}
+#map-container{
+    display: flex;
+    justify-content: center;
+    padding: 5px;
+    width: 800px;
+    height: 400px;   
+    
+}
+
+#map-title{
+    padding: 5px;
+    text-align: center;
+}
+
+#map-description{
+    padding: 5px;
+    text-align: center;
+}
+
+
+#btns{
+    padding: 5px;
+    display: block;
+    text-align: center;
+}
+
+.btn{
+    margin: 3px;
+}

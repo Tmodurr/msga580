@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Lab 5 - Thomas Moran</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+    <body>
+        <div class="container">
+            <div id="map-basemap-dropdown">
+                <select id="map-selector" onchange="mapChange();"></select>
+            </div>   
+            <h1 id="map-title"></h1>
+            <div id="map-description"></div>
+            <div id="map-container">
+                <img id="map"> 
+            </div>
+            <div id="btns">
+                <button class="btn" onclick= "zoomIn();">Zoom In</button>
+                <button class="btn" onclick= "zoomOut();">Zoom Out</button>
+                <button class="btn" onclick= "zoomToFullExtent();">Full Extent</button>
+            </div>
+        </div>
+    </body>
+    <script src="js/HTTPRequest.js"></script>
+    <script src="js/index.js" async defer></script>
+</html>
