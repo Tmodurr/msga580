@@ -30,6 +30,8 @@ var currentXmin,
     currentYmin, 
     currentYmax;
 
+var currentCRS;
+
 var description; 
 
 
@@ -38,7 +40,7 @@ var description;
 
 function init(){
 
-    updateTitle(basemaps.esriWorldStreetmap);
+    updateTitle(basemaps.esriWorldStreetmap.id);
     addBasemapOptions(basemaps);
     let basemap = document.getElementById('map-selector').value;
     let basemapURL = getBaseURL(basemap);
@@ -73,15 +75,15 @@ function updateTitle(basemap){
 
     let title = document.getElementById('map-title');
 
-    if (basemap.id === "esri-world-streetmap"){
+    if (basemap === "esri-world-streetmap"){
         title.innerHTML = 'ESRI World Street Map (2D)';
         return
     }
-    else if (basemap.id === "us-topo-maps"){
+    else if (basemap === "us-topo-maps"){
         title.innerHTML = 'USA Topo Maps';
         return
     }
-    else if (basemap.id === "us-pop-change"){
+    else if (basemap === "us-pop-change"){
         title.innerHTML = "USA Population Change (1990-2000)";
         return
     }
@@ -104,10 +106,6 @@ function getBaseURL(basemapId){
 
 // MAP ACTIONS
 function zoomIn(){
-    console.log('Zoom in brah');
-
-    //get currentURL of basemap
-
     //bring in local xmin
     let length = currentXmax - currentXmin; 
     let height = currentYmax - currentYmin; 
@@ -120,7 +118,7 @@ function zoomIn(){
     let basemap = document.getElementById('map-selector').value;
     let basemapURL = getBaseURL(basemap);
 
-    let img = basemapURL + '/export?bbox=' + newXmin + '%2C' + newYmin + '%2C' + newXmax + '%2C' + newYmax + '&bboxSR=4326&layers=&layerDefs=&size=800%2C+400&imageSR=4326&format=png&transparent=false&dpi=&time=&layerTimeOptions=&dynamicLayers=&gdbVersion=&mapScale=&f=image';
+    let img = basemapURL + '/export?bbox=' + newXmin + '%2C' + newYmin + '%2C' + newXmax + '%2C' + newYmax + '&bboxSR=' +  + currentCRS + '&layers=&layerDefs=&size=800%2C+400&imageSR=' + currentCRS + '&format=png&transparent=false&dpi=&time=&layerTimeOptions=&dynamicLayers=&gdbVersion=&mapScale=&f=image';
     let map = document.getElementById('map');
     map.src = img;
 
@@ -132,7 +130,27 @@ function zoomIn(){
 }
 
 function zoomOut(){
-    console.log('Zoom out brah');
+
+    let length = currentXmax - currentXmin; 
+    let height = currentYmax - currentYmin; 
+    
+    let basemap = document.getElementById('map-selector').value;
+    let basemapURL = getBaseURL(basemap);
+
+    let newXmin =  currentXmin - (length * .5);
+    let newXmax =  currentXmax + (length * .5);
+    let newYmin = currentYmin - (height *.5);
+    let newYmax = currentYmax + (height *.5);
+
+    let img = basemapURL + '/export?bbox=' + newXmin + '%2C' + newYmin + '%2C' + newXmax + '%2C' + newYmax + '&bboxSR='  + currentCRS + '&layers=&layerDefs=&size=800%2C+400&imageSR='  + currentCRS + '&format=png&transparent=false&dpi=&time=&layerTimeOptions=&dynamicLayers=&gdbVersion=&mapScale=&f=image';
+    let map = document.getElementById('map');
+    map.src = img;
+
+    currentXmin = newXmin;
+    currentXmax = newXmax;
+    currentYmax = newYmax;
+    currentYmin = newYmin; 
+
 }
 
 function handleResponseData(response){
@@ -150,11 +168,20 @@ function handleResponseData(response){
     ymin = initialExtent.ymin;
     ymax = initialExtent.ymax; 
 
+    currentCRS = currentResponse.spatialReference.latestWkid;
 
     currentXmin = xmin; 
-    currentXmax - xmax;
+    currentXmax = xmax;
     currentYmin = ymin;
     currentYmax = ymax; 
+
+    // let basemap = document.getElementById('map-selector').value;
+    // let basemapURL = getBaseURL(basemap);
+
+    // let img = basemapURL + '/export?bbox=' + currentXmin + '%2C' + currentYmin + '%2C' + currentXmax + '%2C' + currentYmax + '&bboxSR=4326&layers=&layerDefs=&size=800%2C+400&imageSR=4326&format=png&transparent=false&dpi=&time=&layerTimeOptions=&dynamicLayers=&gdbVersion=&mapScale=&f=image';
+    // let map = document.getElementById('map');
+    // map.src = img;
+    // console.log(img)
 
 }
 
@@ -164,14 +191,26 @@ function zoomToFullExtent(){
     let basemap = document.getElementById('map-selector').value;
     let basemapURL = getBaseURL(basemap);
 
-    let img = basemapURL + '/export?bbox=' + xmin + '%2C' + ymin + '%2C' + xmax + '%2C' + ymax + '&bboxSR=4326&layers=&layerDefs=&size=800%2C+400&imageSR=4326&format=png&transparent=false&dpi=&time=&layerTimeOptions=&dynamicLayers=&gdbVersion=&mapScale=&f=image';
+    let img = basemapURL + '/export?bbox=' + xmin + '%2C' + ymin + '%2C' + xmax + '%2C' + ymax + '&bboxSR=' + currentCRS + '&layers=&layerDefs=&size=800%2C+400&imageSR=' + currentCRS + '&format=png&transparent=false&dpi=&time=&layerTimeOptions=&dynamicLayers=&gdbVersion=&mapScale=&f=image';
     let map = document.getElementById('map');
     map.src = img;
     
 }
 
 
-
+function mapChange(){
+    
+    let basemap = document.getElementById('map-selector').value;
+    updateTitle(basemap);
+    let basemapURL = getBaseURL(basemap);
+    let basemapMetadataURL = encodeURI(basemapURL + "?f=pjson"); 
+    let map = document.getElementById('map');
+    map.src = "";
+    sendHttpRequest(basemapMetadataURL);  
+    setTimeout(function(){
+        zoomToFullExtent();
+     }, 1000);
+}
 
 
 
