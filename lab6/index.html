@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+    <head>
+        <title>Dojo Intro</title>
+        <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.14.1/dojo/dojo.js"></script>
+        <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.14.1/dijit/themes/claro/claro.css">
+    </head>
+    <body class="claro">
+
+        <h1 id="heading1">Text Here if you want to use DOJO</h1>
+        <button id="btn1" type="button" data-dojo-type="dijit/form/Button" data-dojo-props="onClick: function(){console.log('First button clicked');}">
+            Click Me!
+        </button>   
+
+        <button id="btn2"></button>
+        
+        <script>
+                require(["dojo/dom", "dojo/on","dojo/parser","dijit/form/Button", "dojo/domReady!"], function(dom, on, parser, Button){
+                    parser.parse(); //converts html code to widget
+                    var heading = dom.byId("heading1");
+                    heading.innerHTML = "Hello Dojo1!"
+    
+                    on(heading, "click", function(){
+                        alert('YOU CLICKED THE HEADER');
+                    })
+
+                    var btn2 = new Button({
+                        label: "Click Me Too!", 
+                        onClick: function(){alert('Button 2 was clicked');}},"btn2");
+                    btn2.startup();
+                
+                    btn2.set("label", "TIMMMMMMMMMY") // use get and setter methods to set attributes -> btn2.label = "TIMMMMMMMMY" wont works
+                    heading.innerHTML = btn2.get('label')
+                
+                
+                });                    
+            </script>
+    </body>
+</html>
