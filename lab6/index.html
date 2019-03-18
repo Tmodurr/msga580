@@ -1,38 +1,189 @@
 <!DOCTYPE html>
     <head>
-        <title>Dojo Intro</title>
-        <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.14.1/dojo/dojo.js"></script>
+        <title>Lab 6 - Tmoran</title>
+
+        <script src="https://js.arcgis.com/3.27/"></script>
+        <link rel="stylesheet" href="https://js.arcgis.com/3.27/esri/css/esri.css">
         <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.14.1/dijit/themes/claro/claro.css">
-    </head>
-    <body class="claro">
+        <style>
 
-        <h1 id="heading1">Text Here if you want to use DOJO</h1>
-        <button id="btn1" type="button" data-dojo-type="dijit/form/Button" data-dojo-props="onClick: function(){console.log('First button clicked');}">
-            Click Me!
-        </button>   
+			  html, body, #map {
+			    height: 100%;
+			    padding: 0;
+			    margin: 0;
+			  }
+			  #container{
+			  	height: 100%;
+			  	width: 100%;
+			  }
 
-        <button id="btn2"></button>
-        
+			  #map {
+			   border-top: 4px solid grey;
+
+			  }
+
+			  #mapChoices{
+			  	padding-top: 15px;
+			  	padding-left: 10px;
+			  }
+
+		</style>
+
+
+
         <script>
-                require(["dojo/dom", "dojo/on","dojo/parser","dijit/form/Button", "dojo/domReady!"], function(dom, on, parser, Button){
-                    parser.parse(); //converts html code to widget
-                    var heading = dom.byId("heading1");
-                    heading.innerHTML = "Hello Dojo1!"
-    
-                    on(heading, "click", function(){
-                        alert('YOU CLICKED THE HEADER');
-                    })
+    	
+	    	require([
 
-                    var btn2 = new Button({
-                        label: "Click Me Too!", 
-                        onClick: function(){alert('Button 2 was clicked');}},"btn2");
-                    btn2.startup();
-                
-                    btn2.set("label", "TIMMMMMMMMMY") // use get and setter methods to set attributes -> btn2.label = "TIMMMMMMMMY" wont works
-                    heading.innerHTML = btn2.get('label')
-                
-                
-                });                    
-            </script>
+	      		"dojo/parser", 
+				"dojo/dom",
+	      		"dijit/form/Select",
+				"esri/map", 
+			    "esri/arcgis/utils",
+			    "esri/urlUtils",
+			    "esri/dijit/Legend",
+				"esri/dijit/Scalebar",
+	      		"esri/dijit/OverviewMap",	
+
+				"dijit/layout/BorderContainer", 
+	      		"dijit/layout/ContentPane",
+	      		"dijit/layout/TabContainer",
+			
+	      		"dojo/domReady!"], 
+
+	      		function( parser, dom, Select, Map, arcUtils, urlUtils, Legend, Scalebar, OverviewMap){
+
+	      			parser.parse()
+
+	      			var map, 
+	      				scalebar,
+	      				overviewMap,
+	      				mapOptions;
+
+	      			var chicagoYouth = {name: 'chiYouthPop', label: "Chicago Youth Population", url: 'http://www.arcgis.com/home/webmap/viewer.html?webmap=c63cdcbbba034b62a2f3becac021b0a8', itemId: 'c63cdcbbba034b62a2f3becac021b0a8'};
+	      			var medianIncome = {name: 'medianIncome',label: "USA Median Household Income", url: 'http://www.arcgis.com/home/webmap/viewer.html?webmap=1e79439598494713b553f990a4040886', itemId: '1e79439598494713b553f990a4040886'};
+	      			var topo = {name: 'topoBasemap',label: "Topo Map", url: null, itemId: null};
+	      			var timmy;
+
+	      			
+
+	      			function createTopo(){
+
+	      				map = new Map("map", {
+						    basemap: "topo",
+						    center: [-122.45, 37.75],
+						    zoom: 13
+						});	
+
+
+	      			}
+
+
+	      			function init(){
+
+	      				createTopo();
+
+				        scalebar = new Scalebar({
+				          map: map,
+				          scalebarUnit: "dual"      // "dual" displays both miles and kilometers
+				        });
+
+				        overviewMap = new OverviewMap({
+				          map: map,
+				          visible: true
+				        });
+				        overviewMap.startup();
+
+
+				        mapOptions = new Select({
+							name: "mapOptions",
+							options: [
+										{label: chicagoYouth.label, value: chicagoYouth.name},
+										{label: medianIncome.label, value: medianIncome.name},
+										{label: topo.label, value: topo.name, selected: true}
+									]
+						});
+						mapOptions.placeAt("mapChoices");
+						mapOptions.startup(); 
+					}
+
+	      			init()
+
+
+	      			function cleanup(map){
+	      			  //house keeping on map change
+	      			  if (map instanceof Map){
+				        map.destroy();
+				      }     
+				      if (overviewMap instanceof OverviewMap){
+				        overviewMap.destroy();
+				      }
+				      if (scalebar instanceof Scalebar){
+				        scalebar.destroy();
+				      }
+	      			}
+
+	      			function createAGOLWebMap(itemId){
+	      			  arcUtils.createMap(itemId, "map").then(function (response) {
+ 						map = response.map; 
+				      });
+	      			}
+
+
+
+				    mapOptions.on('change', function(evt) {
+			    	
+				        newMap = this.value; 
+
+				        if(newMap === topo.name){        
+				          cleanup(map);
+				    	  createTopo();  
+
+				        }
+				        else if (newMap === chicagoYouth.name){
+ 						  cleanup(map);
+				    	  createAGOLWebMap(chicagoYouth.itemId);
+				    
+
+				        }
+				        else if (newMap === medianIncome.name){
+				          cleanup(map);
+				          createAGOLWebMap(medianIncome.itemId) 
+				       	}
+				        
+
+
+				    });
+
+
+
+					//
+
+
+					
+	      		}	 	
+	      	)		
+
+   		</script>
+
+    </head>
+
+    <body class="claro">
+	    <div id="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props = "design:'sidebar', gutters:false">        
+	      <div id="mapTitle" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">Placeholder</div>
+	        <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">
+	              <div id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Map Options">Please select the appropriate map</div>
+	              <div id="mapLegend" data-dojo-type="dijit/layout/ContentPane" title="Legend">
+	              	<div id="legend"></div>
+	              </div>
+								
+	        </div>
+	      <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'" style="overflow:hidden;"></div>
+	    </div>		
     </body>
+
+
+
+
+
 </html>
