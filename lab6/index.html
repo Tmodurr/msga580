@@ -22,6 +22,10 @@
 
 			  }
 
+			  #mapTitle{
+			  	font-weight: bold; 
+			  }
+
 			  #mapChoices{
 			  	padding-top: 15px;
 			  	padding-left: 10px;
@@ -37,10 +41,10 @@
 
 	      		"dojo/parser", 
 				"dojo/dom",
+				"dojo/dom-construct",
 	      		"dijit/form/Select",
 				"esri/map", 
 			    "esri/arcgis/utils",
-			    "esri/urlUtils",
 			    "esri/dijit/Legend",
 				"esri/dijit/Scalebar",
 	      		"esri/dijit/OverviewMap",	
@@ -51,52 +55,72 @@
 			
 	      		"dojo/domReady!"], 
 
-	      		function( parser, dom, Select, Map, arcUtils, urlUtils, Legend, Scalebar, OverviewMap){
+	      		function( parser, dom, domConstruct, Select, Map, arcUtils, Legend, Scalebar, OverviewMap){
 
 	      			parser.parse()
 
 	      			var map, 
 	      				scalebar,
+	      				legend, 
 	      				overviewMap,
 	      				mapOptions;
 
 	      			var chicagoYouth = {name: 'chiYouthPop', label: "Chicago Youth Population", url: 'http://www.arcgis.com/home/webmap/viewer.html?webmap=c63cdcbbba034b62a2f3becac021b0a8', itemId: 'c63cdcbbba034b62a2f3becac021b0a8'};
 	      			var medianIncome = {name: 'medianIncome',label: "USA Median Household Income", url: 'http://www.arcgis.com/home/webmap/viewer.html?webmap=1e79439598494713b553f990a4040886', itemId: '1e79439598494713b553f990a4040886'};
 	      			var topo = {name: 'topoBasemap',label: "Topo Map", url: null, itemId: null};
-	      			var timmy;
+
+	      			var mapTitle = dom.byId("mapTitle")
 
 	      			
 
 	      			function createTopo(){
-
 	      				map = new Map("map", {
 						    basemap: "topo",
 						    center: [-122.45, 37.75],
 						    zoom: 13
 						});	
-
+						createScalebar(map);
+ 						createOverviewmap(map);
 
 	      			}
+
+	      			function createScalebar(map){
+      				  scalebar = new Scalebar({
+			           map: map,
+			           scalebarUnit: "dual"      // "dual" displays both miles and kilometers
+			          });
+	      			}
+				       
+				    function createOverviewmap(map){
+			    	  overviewMap = new OverviewMap({
+			            map: map,
+			            visible: true
+			          });
+			          overviewMap.startup();
+				    }
+
+				    function createLegend(map, legendLayerInfo){
+
+				      legendDiv = dom.byId("mapLegend");
+
+				      var node = domConstruct.toDom("<div id='legend'></div>")
+				      domConstruct.place(node, "mapLegend");
+					  legend = new Legend({
+			            map: map,
+			            layerInfos: legendLayerInfo},
+			            "legend");
+
+			          legend.startup();
+				    }
+
 
 
 	      			function init(){
 
 	      				createTopo();
-
-				        scalebar = new Scalebar({
-				          map: map,
-				          scalebarUnit: "dual"      // "dual" displays both miles and kilometers
-				        });
-
-				        overviewMap = new OverviewMap({
-				          map: map,
-				          visible: true
-				        });
-				        overviewMap.startup();
-
-
+				
 				        mapOptions = new Select({
-							name: "mapOptions",
+							name: "mapChoices",
 							options: [
 										{label: chicagoYouth.label, value: chicagoYouth.name},
 										{label: medianIncome.label, value: medianIncome.name},
@@ -121,15 +145,22 @@
 				      if (scalebar instanceof Scalebar){
 				        scalebar.destroy();
 				      }
+				      if (legend instanceof Legend){
+				      	legend.destroy();
+				      }
 	      			}
 
-	      			function createAGOLWebMap(itemId){
+	      			function createAGOLWebMap(itemId, itemName){
+	      			  mapTitle.innerHTML = itemName;
 	      			  arcUtils.createMap(itemId, "map").then(function (response) {
  						map = response.map; 
+ 						createScalebar(map);
+ 						createOverviewmap(map);
+ 						let legendLayerInfo = arcUtils.getLegendLayers(response);
+ 						createLegend(map, legendLayerInfo);
+
 				      });
 	      			}
-
-
 
 				    mapOptions.on('change', function(evt) {
 			    	
@@ -142,25 +173,17 @@
 				        }
 				        else if (newMap === chicagoYouth.name){
  						  cleanup(map);
-				    	  createAGOLWebMap(chicagoYouth.itemId);
+				    	  createAGOLWebMap(chicagoYouth.itemId, chicagoYouth.label);
 				    
 
 				        }
 				        else if (newMap === medianIncome.name){
 				          cleanup(map);
-				          createAGOLWebMap(medianIncome.itemId) 
+				          createAGOLWebMap(medianIncome.itemId, medianIncome.label);
 				       	}
 				        
-
-
 				    });
 
-
-
-					//
-
-
-					
 	      		}	 	
 	      	)		
 
@@ -170,20 +193,15 @@
 
     <body class="claro">
 	    <div id="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props = "design:'sidebar', gutters:false">        
-	      <div id="mapTitle" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">Placeholder</div>
+	      <div id="mapTitle" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">Map Loading....</div>
 	        <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">
 	              <div id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Map Options">Please select the appropriate map</div>
 	              <div id="mapLegend" data-dojo-type="dijit/layout/ContentPane" title="Legend">
 	              	<div id="legend"></div>
-	              </div>
-								
+	              </div>			
 	        </div>
 	      <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'" style="overflow:hidden;"></div>
 	    </div>		
     </body>
-
-
-
-
 
 </html>
