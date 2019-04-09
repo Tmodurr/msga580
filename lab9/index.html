@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Lab 9 - Thomas Moran</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.20/esri/css/esri.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.20/dijit/themes/claro/claro.css">
+        <script src="https://js.arcgis.com/3.20/"></script>
+        <style>
+            
+            html, body, .container, #map {
+                    height:100%;
+                    width:100%;
+                    margin:0;
+                    padding:0;
+                    margin:0;
+                    font-family: "Open Sans";
+                            }
+            #map {
+                padding:0;
+            }
+            #table-of-contents{
+                width:25%;
+            }
+
+            #banner{
+                color: white;
+                background-color: rgb(8, 8, 99)
+            }
+
+            #search-title{
+                color: white;
+                background-color: rgb(83, 30, 83);
+                display: block;
+                font-weight: bold;
+            }
+
+            #search-condition-btn-container{
+                padding-top: 5px;
+            }
+
+            #search-results{
+                border-style: solid;
+                border-width: 1px;
+                border-color: rgb(82, 81, 81);
+                height: 60%;
+            }
+
+            #where-clause-container{
+                padding: 2px;
+                display: block;
+            }
+            
+        
+        </style>
+    </head>
+    
+    <script>
+    
+    var map,
+            mapLayers;
+        require([   
+                "dojo/parser",
+                "dojo/ready",
+                "dojo/on",
+                "dojo/dom-construct", 
+                "dojo/dom",
+                "dijit/registry", 
+                "esri/map",
+                "esri/layers/ArcGISDynamicMapServiceLayer",
+                "esri/layers/FeatureLayer",
+                "esri/urlUtils",
+                "esri/arcgis/utils",
+                "esri/dijit/LayerList",
+                "esri/InfoTemplate",
+                "esri/renderers/smartMapping",
+                "esri/dijit/Legend",
+                "dijit/form/Select",
+                "dijit/form/RadioButton",
+                "dijit/form/Button",
+                "dijit/_WidgetBase", //start undeclared
+                "dijit/layout/BorderContainer",
+                "dijit/layout/ContentPane",
+                "dijit/layout/TabContainer",
+                "dojo/domReady!"
+            ],
+            function(
+                parser,
+                ready,
+                on,
+                domConstruct,
+                dom,
+                registry,
+                Map,
+                DynamicMapService,
+                FeatureLayer,
+                urlUtils,
+                arcgisUtils,
+                LayerList,
+                InfoTemplate,
+                smartMapping,
+                Legend,
+                Select,
+                RadioButton
+            ) {
+                
+                parser.parse();
+
+                const agsURL = 'http://34.239.119.51:6080/arcgis/rest/services/CHANGETHISTONEWIP'
+
+                map = new Map("map", {
+                    basemap:"topo",
+                    center: [-100.0850508, 41.647463],
+                    zoom: 4
+                });
+
+    
+                var searchConditionBtn = new RadioButton({
+                    checked: true,
+                    value: "capitalName",
+                    name: "searchConditionBtn",
+                }, "capNameBtn").startup();
+    
+    
+    
+    
+            });
+    
+    
+    
+    </script>
+    
+    <body class="claro">
+        <div class="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline',gutters:false">
+            <div id="banner" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
+                <div id="title"><h2>U.S Capitals and 111st Congress Map</h2></div>
+            </div>
+            <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
+                <div id="search-conditions" class="pane-container" data-dojo-type="dijit/layout/ContentPane">             
+                    <span id="search-title">Search for Capitals based on....</span>   
+
+                    <form id="search-condition-btn-container">
+                        <input type="radio" name="capitalName" id="capNameBtn" value="capitals"/> <label for="capNameBtn">Capital Name</label> <br />
+                        <input type="radio" data-dojo-type="dijit/form/RadioButton" name="pop2000btn" id="2000PopBtn" value="pop2000"/> <label for="2000PopBtn">Population in 2000</label> <br />
+                        
+                        <span id="where-clause-container">
+                            <select name="operator-selector" data-dojo-type="dijit/form/Select">
+                                <option value="greater-than" selected="selected">&gt;</option>
+                                <option value="less-than" >&lt;</option>
+                            </select>
+                            <input type="text" id="search-condition-clause" name="search-clause" required minlength="1"  size="20">
+                            
+                        </span>
+
+                        <button data-dojo-type="dijit/form/Button" type="button">
+                           Search
+                        </button>
+                        <button data-dojo-type="dijit/form/Button" type="button">
+                            Clear
+                         </button>
+                    </form>
+
+                </div>
+
+                 <div id="search-results" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
+                   Insert Search Results Here
+                </div> 
+
+                
+                    
+            </div>
+            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
+        </div>
+    </body>
+
+</html>
