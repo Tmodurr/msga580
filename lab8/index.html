@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Lab 8 - Thomas Moran</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.27/esri/css/esri.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.27/dijit/themes/claro/claro.css">
+        <script src="https://js.arcgis.com/3.27"></script>  
+        <style>
+            
+            #banner {
+                background-color: #4804e6;
+            }
+            #title{
+                color:white;
+            }
+                   
+            html, body, .container, #map {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                margin:0;
+                font-family: "Open Sans";
+                        }
+            #map {
+                padding:0;
+            }
+            #table-of-contents{
+                width:25%;
+            }
+            .esriLayer{
+            background-color: #fff;
+            }
+            .esriLayerList .esriList{
+                border-top:none;
+            }
+            .esriLayerList .esriTitle {
+            background-color: #fff;
+            border-bottom:none;
+            }
+            .esriLayerList .esriList ul{
+            background-color: #fff;
+            }
+            .pane-container{
+                width:100%;
+                height:50%;
+            }
+            .pane-header{
+                height:6%;
+                width:100%;
+                background-color: rgb(105, 22, 105);    
+                border-bottom: 1px solid #444;        
+            }
+            .pane-header-text{
+                padding-left: 5px;
+                color: white;
+                font-weight: bold;
+            }
+
+        </style>
+
+
+    </head>
+    <script>
+        
+        var map,
+            mapLayers;
+
+        require([   
+                "dojo/parser",
+                "dojo/ready",
+                "dojo/on",
+                "dojo/dom-construct", 
+                "dojo/dom",
+                "dijit/registry", 
+                "esri/map",
+                "esri/layers/ArcGISDynamicMapServiceLayer",
+                "esri/layers/FeatureLayer",
+                "esri/urlUtils",
+                "esri/arcgis/utils",
+                "esri/dijit/LayerList",
+                "esri/InfoTemplate",
+                "esri/renderers/smartMapping",
+                "esri/dijit/Legend",
+                "dijit/form/Select",
+                "dijit/_WidgetBase", //start undeclared
+                "dijit/layout/BorderContainer",
+                "dijit/layout/ContentPane",
+                "dijit/layout/TabContainer",
+                "dojo/domReady!"
+            ],
+            function(
+                parser,
+                ready,
+                on,
+                domConstruct,
+                dom,
+                registry,
+                Map,
+                DynamicMapService,
+                FeatureLayer,
+                urlUtils,
+                arcgisUtils,
+                LayerList,
+                InfoTemplate,
+                smartMapping,
+                Legend,
+                Select
+            ) {
+                
+                parser.parse();
+
+                //6080:HTTP
+                //6443:HTTPS
+                const agsURL = 'http://34.239.119.51:6080/arcgis/rest/services'
+
+                var congressId, 
+                    congressDMS,
+                    capitalsResource,
+                    capitalCitiesId,
+                    capitalCities,
+                    attributeWidget,
+                    classificationWidget,
+                    layerList;
+
+                map = new Map("map", {
+                    basemap:"topo",
+                    center: [-100.0850508, 41.647463],
+                    zoom: 4
+                });
+
+                function createOptions(){
+  
+                    var attributeOptions = new Select({
+                        name: "attribute-picklist",
+                        id: "attribute-Options",
+                        options: [
+                            {
+                                label: "Population 2007",
+                                value: "POP2007",
+                                selected: true
+                            },
+                            {
+                                label: "Household Number",
+                                value: "HOUSEHOLDS"
+                            },
+                            {
+                                label: "House Vacancy",
+                                value: "VACANT"
+                            }
+                        ]
+                    });
+                
+
+                    attributeOptions.placeAt("attribute-selector");
+                    attributeOptions.startup();
+                    
+                    
+                    var classOptions = new Select({
+                        name: "classification-picklist",
+                        id: "class-Options",
+                        options: [
+                            {
+                                label: "Quantile",
+                                value: "quantile",
+                                selected: true
+                            },
+                            {
+                                label: "Natural Breaks",
+                                value: "natural-breaks"
+                            },
+                            {
+                                label: "Equal Interval",
+                                value: "equal-interval"
+                            },
+                        ]
+                    });
+
+                    classOptions.placeAt("classification-selector");
+                    classOptions.startup();
+
+                    attributeWidget = registry.byId("attribute-Options"); //gets widget
+                    classificationWidget = registry.byId("class-Options"); //gets widget
+                    
+                }
+
+                function initializeServices(){
+
+                    //Dynamic Map Service
+                    congressId = "Congress-Districts";
+                    congressDMS  = new DynamicMapService(agsURL + "/USA_Congress_Party_111/MapServer", {
+                        "id": congressId, 
+                        "opacity": 1.0,
+
+                    });
+                    congressDMS.setVisibleLayers([0, 1]);
+
+                    //Dynamic Feature Layer
+                    capitalsResource = agsURL + '/us_state_capitals/MapServer/0'
+                    capitalCitiesId = 'Capital-Cities'
+                    capitalCities = new FeatureLayer(capitalsResource , {
+                        "opacity": 0.9,
+                        id: capitalCitiesId,
+                        mode: FeatureLayer.MODE_SNAPSHOT,
+                        outFields: ["*"],
+                        infoTemplate: new InfoTemplate("State Capital Information", "State Name: ${NAME} <br> State Abbreviation: ${ST} <br> Population (2000): ${POP2000} <br> Population (2007): ${POP2007} <br> Household (count): ${HOUSEHOLDS}")
+                    });
+
+
+                  
+
+                }
+
+                function createLayerList(){
+                     
+                     layerList = new LayerList({
+                         map: map,
+                         options: {id: "layer-layer-widget"},
+                         showLegend: true, 
+                         showSubLayers: true, 
+                         showOpacitySlider: true,
+                     },"layerList");
+ 
+                     let basemap = map.getLayer(map.layerIds[0]); 
+                     basemap.id = 'Topo Basemap'; 
+ 
+                     layerList.startup();
+ 
+                 };  
+
+                function generateRenderer(inputLayer, attribute, classification){
+
+                    var currentRenderer = {
+                        field: attribute ,
+                        layer: inputLayer,
+                        classificationMethod: classification,
+                        basemap: map.getBasemap(),
+                        numClasses: 5,
+                    };
+
+                    smartMapping.createClassedSizeRenderer(currentRenderer).then(
+                        function(response) {
+                            let renderer = response.renderer;
+                            inputLayer.setRenderer(renderer);
+                            inputLayer.redraw();
+                            layerList.refresh();
+                    });
+
+                }
+
+                createOptions();
+                initializeServices();
+                generateRenderer(capitalCities, "POP2007", "quantile");
+                capitalCities.redraw();
+               
+                map.on("layers-add-result", function(){
+                    createLayerList();
+                });
+                map.addLayers([ congressDMS,capitalCities]); 
+               
+                attributeWidget.on('change', function(){
+                    let newAttribute = this.value; 
+                    let currentClassification = classificationWidget.value;
+                    console.log('Attribute Change to ' + newAttribute);
+                    console.log('Current classification  is:  ' + currentClassification);
+                    generateRenderer(capitalCities, newAttribute, currentClassification);
+                });
+                classificationWidget.on('change', function(){
+                    let newclassification = this.value; 
+                    let currentAttribute = attributeWidget.value;
+                    console.log('Class Change to ' + newclassification);
+                    console.log('Current attribute is:  ' + currentAttribute);
+                    generateRenderer(capitalCities, currentAttribute, newclassification);
+                });
+
+        });
+
+    </script>
+
+    <body class="claro">
+        <div class="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline',gutters:false">
+            <div id="banner" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
+                <div id="title"><h1>U.S. 111st Congress Map</h1></div>
+            </div>
+            <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
+                <div id="layer-list-pane" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
+                    <div class="pane-header">
+                        <div class="pane-header-text" >Layer List</div>
+                    </div> 
+                    <div id="layerList"></div>
+                </div>
+                <div id="symbologyControl" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
+                    <div class="pane-header">
+                        <div class="pane-header-text" >Symbology Control</div>
+
+                        <div id="attribute-selector" data-dojo-type="dijit/layout/ContentPane" data-dojo-type="dijit/form/Select">
+                            Choose an attribute of the capital layer </b>
+                        </div>
+                        <div id="classification-selector" data-dojo-type="dijit/layout/ContentPane" data-dojo-type="dijit/form/Select">
+                            Choose a classification method</b>
+                        </div>
+                    </div>   
+                </div>            
+            </div>
+            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
+        </div>
+    </body>
+
+</html>
