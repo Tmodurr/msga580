@@ -22,10 +22,10 @@
                 padding:0;
             }
             #table-of-contents{
-                width:25%;
+                width:20%;
             }
 
-            #banner{
+            #title-block{
                 color: white;
                 background-color: rgb(8, 8, 99)
             }
@@ -41,7 +41,7 @@
                 padding-top: 5px;
             }
 
-            #search-results{
+            #search-results-container{
                 border-style: solid;
                 border-width: 1px;
                 border-color: rgb(82, 81, 81);
@@ -52,20 +52,25 @@
                 padding: 2px;
                 display: block;
             }
-            
+            .search-option{
+                display: inline-block;
+            }
         
         </style>
     </head>
     
     <script>
     
-    var map,
-            mapLayers;
+        var map,
+            mapLayers,
+            currentSearchLayer;
         require([   
                 "dojo/parser",
                 "dojo/ready",
                 "dojo/on",
                 "dojo/dom-construct", 
+                'dojo/dom-style',
+                'dojo/query',
                 "dojo/dom",
                 "dijit/registry", 
                 "esri/map",
@@ -91,6 +96,8 @@
                 ready,
                 on,
                 domConstruct,
+                domStyle,
+                query, 
                 dom,
                 registry,
                 Map,
@@ -110,69 +117,178 @@
 
                 const agsURL = 'http://34.239.119.51:6080/arcgis/rest/services/CHANGETHISTONEWIP'
 
-                map = new Map("map", {
-                    basemap:"topo",
-                    center: [-100.0850508, 41.647463],
-                    zoom: 4
+
+                on(query('.search-option'),'click',function(){
+                    options = this;
+                    let searchOption = options.children[0].value;
+                    
+                    switch (searchOption){
+
+                        case 'pop2000':
+                            domStyle.set(dom.byId("capital-search-condition-container"), "display", "none");
+                            domStyle.set(dom.byId("pop-search-condition-container"), "display", "block");
+                            currentSearchLayer = 'pop2000';
+                            break;
+    
+                        case 'capitals':
+                            domStyle.set(dom.byId("pop-search-condition-container"), "display", "none");
+                            domStyle.set(dom.byId("capital-search-condition-container"), "display", "block");
+                            currentSearchLayer = 'capitals';
+                            break;
+
+                    }
+                });
+             
+                on(query('#clear-btn'), 'click', function(){
+                    clearResults();
                 });
 
-    
-                var searchConditionBtn = new RadioButton({
-                    checked: true,
-                    value: "capitalName",
-                    name: "searchConditionBtn",
-                }, "capNameBtn").startup();
-    
-    
-    
-    
+                on(query('#search-btn'), 'click', function(){
+                    clearResults();
+                    initSearch(currentSearchLayer);
+
+
+                });
+
+                function init(){     
+
+                    map = new Map("map", {
+                        basemap:"topo",
+                        center: [-100.0850508, 41.647463],
+                        zoom: 4
+                    });
+
+                    domStyle.set(dom.byId('capital-search-condition-container'), "display", "block");
+                    currentSearchLayer = 'capitals'; //defines default value on page load
+                    domStyle.set(dom.byId('pop-search-condition-container'), "display", "none");
+                }
+                
+                function initSearch(currentSearchLayer){
+                    //Initializes and validates search
+
+                    function __validatePopInputs__(){
+                        let popInput = dom.byId("pop-search-condition-clause").value;
+                        searchOptionsWidget = registry.byId("operator-selector").value; //gets widget
+                        
+                        popInput = parseInt(Math.round(popInput));
+
+                        let invalidNumber = isNaN(popInput);
+                        let empty = (popInput == ""); 
+
+                        if (invalidNumber || empty || popInput == null){
+                            alert('Please enter a valid population threshold');
+                            return false
+                        }
+                        else{
+                            return true
+                        }
+                    };
+
+                    function __validateCapitalsInputs__(){
+                        let capitalInput = dom.byId("capital-search-condition-clause").value;
+
+                        if (capitalInput == ""){
+                            alert('Please enter a keyword of the capital name!');
+                            return false
+                        }
+
+                        else{
+                            return true
+                        }
+
+                        console.log(capitalInput);
+                    };
+
+                    if (currentSearchLayer === "pop2000"){
+                        console.log('validating pop layer');
+                        let queryReady = __validatePopInputs__();
+                       
+                        if(queryReady){
+                            executeQuery('pop2000');
+                        }
+
+                       
+                    }
+                    else if (currentSearchLayer === "capitals"){
+                        console.log('validating capitals layer');
+                        let queryReady = __validateCapitalsInputs__();
+                        if(queryReady){
+                            executeQuery('capitals');
+                        }
+                    }
+                    else{
+                        alert("Current Layer ${currentSearchLayer} is not supported for search");
+                    }
+                }
+
+                function executeQuery(layer){
+
+                    console.log('executing query');
+
+                }
+
+                function clearResults(){
+                    let results = dom.byId('search-results');
+                    results.innerHTML = ""; 
+                }
+
+                init();
+
             });
-    
-    
     
     </script>
     
     <body class="claro">
         <div class="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline',gutters:false">
-            <div id="banner" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
+            <div id="title-block" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
                 <div id="title"><h2>U.S Capitals and 111st Congress Map</h2></div>
             </div>
             <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
                 <div id="search-conditions" class="pane-container" data-dojo-type="dijit/layout/ContentPane">             
                     <span id="search-title">Search for Capitals based on....</span>   
-
-                    <form id="search-condition-btn-container">
-                        <input type="radio" name="capitalName" id="capNameBtn" value="capitals"/> <label for="capNameBtn">Capital Name</label> <br />
-                        <input type="radio" data-dojo-type="dijit/form/RadioButton" name="pop2000btn" id="2000PopBtn" value="pop2000"/> <label for="2000PopBtn">Population in 2000</label> <br />
-                        
-                        <span id="where-clause-container">
-                            <select name="operator-selector" data-dojo-type="dijit/form/Select">
-                                <option value="greater-than" selected="selected">&gt;</option>
-                                <option value="less-than" >&lt;</option>
-                            </select>
-                            <input type="text" id="search-condition-clause" name="search-clause" required minlength="1"  size="20">
-                            
+                    <form id="search-condition-container">
+                        <div id="capital-option-container">
+                            <input class= "search-option" id="capitalOption" type="radio" name="searchOptions" value="capitals" checked
+                                data-dojo-type="dijit.form.RadioButton"
+                                data-dojo-props="name: 'searchOptions', value: 'capitals', checked: true">
+                            <label for="capitalOption">Capital Name</label>
+                        </div>
+                        <div id="population-option-container"> 
+                            <input class= "search-option" id="populationOption" type="radio" name="searchOptions" value="pop2000"
+                                data-dojo-type="dijit.form.RadioButton"
+                                data-dojo-props="name: 'searchOptions', value: 'pop2000'">
+                            <label for="populationOption">Population in 2000</label>
+                            <br>
+                        </div>
+                        <span class="where-clause-container" id="capital-search-condition-container">
+                            <input type="text" id="capital-search-condition-clause" name="capital-search-clause" required minlength="1"  size="20">     
                         </span>
-
-                        <button data-dojo-type="dijit/form/Button" type="button">
-                           Search
-                        </button>
-                        <button data-dojo-type="dijit/form/Button" type="button">
-                            Clear
-                         </button>
+                        <span class="where-clause-container" id="pop-search-condition-container" >
+                                <select id="operator-selector" name="operator-selector" data-dojo-type="dijit/form/Select">
+                                    <option value="greaterThan" selected="selected">&gt;</option>
+                                    <option value="lessThan" >&lt;</option>
+                                </select>
+                                <input type="text" id="pop-search-condition-clause" name="pop-search-clause" required minlength="1"  size="20">     
+                        </span>
+                        <div id="search-btn-container"> 
+                            <button id="search-btn" data-dojo-type="dijit/form/Button" type="button">
+                                Search
+                            </button>
+                            <button id="clear-btn" data-dojo-type="dijit/form/Button" type="button">
+                                Clear
+                            </button>
+                        </div>
                     </form>
-
                 </div>
-
-                 <div id="search-results" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
-                   Insert Search Results Here
-                </div> 
-
-                
-                    
+                <div id="search-results-container" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
+                    <div id="search-results"></div>
+                </div>      
             </div>
             <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
         </div>
     </body>
 
 </html>
+
+
+    
