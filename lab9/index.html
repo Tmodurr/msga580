@@ -310,7 +310,6 @@
                     }
                 }
 
-
                 function executeQuery(searchField, searchValue, operator){                
                     //Create Find Task using the URL of the map service to search
                     
@@ -333,28 +332,40 @@
                     queryTask.execute(query, showResults)
 
                 }
-        
 
-                function setBindedPopup(results){
+                function setBindedPopup(graphic, result){
 
-                    let party = results.features[0].attributes.PARTY 
-                    let districtID = results.features[0].attributes.DISTRICTID 
+                	//initialize InfoTemplate
+	                var infoTemplate = new InfoTemplate("${NAME}", "Name : ${NAME}<br/> State : ${ST}<br />Population : ${POP2000} <br />Party : ${PARTY} <br />District ID : ${DISTRICTID}");
+
+	                //create symbol for selected features
+	                var symbol = new SimpleMarkerSymbol();
+	                symbol.setStyle(SimpleMarkerSymbol.STYLE_SQUARE);
+	                symbol.setSize(10);
+	                symbol.setColor(new Color([255,255,0,0.8]));
+                        
+                   	let party = result.features[0].attributes.PARTY
+                    let districtID = result.features[0].attributes.DISTRICTID 
                    
+                    graphic.attributes.PARTY = party;
+                    graphic.attributes.DISTRICTID = districtID;
 
                     var symbol = new SimpleMarkerSymbol();
-                            symbol.setStyle(SimpleMarkerSymbol.STYLE_SQUARE);
-                            symbol.setSize(10);
-                            symbol.setColor(new Color([255,255,0,0.8]));
-
-
-                    map.infoWindow.setTitle(title);
-                    map.infoWindow.setContent(content)
+                        symbol.setStyle(SimpleMarkerSymbol.STYLE_SQUARE);
+                        symbol.setSize(10);
+                        symbol.setColor(new Color([255,255,0,0.8]));
+         
+                    graphic.setSymbol(symbol);
+                    //Set the infoTemplate.
+                    graphic.setInfoTemplate(infoTemplate);
+                    //Add graphic to the map graphics layer.
+                    map.graphics.add(graphic);
 
                 }
 
+                function queryCongressDistrict(graphic){
 
-
-                function queryCongressDistrict(point){
+                    let capitalGeom = graphic.geometry; //run .getExtent();
 
                     var queryTask = new QueryTask(congressDynamicService + "/1");
                     console.log('executing query');
@@ -363,10 +374,8 @@
                         query.outFields = ["PARTY", "DISTRICTID"];
                         let sr = new SpatialReference(102100);
                         query.outSpatialReference = sr; 
-                        query.geometry = point;
-                        queryTask.execute(query, setBindedPopup)
-
-
+                        query.geometry = capitalGeom;
+                        queryTask.execute(query, setBindedPopup.bind(this,graphic)); //
                 }
 
 
@@ -394,43 +403,29 @@
                         // featureSet = results.features;
                         map.graphics.clear();
                             
-                            //initialize InfoTemplate
-                            var infoTemplate = new InfoTemplate("${NAME}", "Name : ${NAME}<br/> State : ${ST}<br />Population : ${POP2000}");
-        
-                            //create symbol for selected features
-                            var symbol = new SimpleMarkerSymbol();
-                            symbol.setStyle(SimpleMarkerSymbol.STYLE_SQUARE);
-                            symbol.setSize(10);
-                            symbol.setColor(new Color([255,255,0,0.8]));
-                            
-                            var resultFeatures = featureSet.features;
-        
-                            var tableResults = [];
-                            //Loop through each feature returned
-                            for (var i=0, il=resultFeatures.length; i<il; i++) {
-                                //Get the current feature from the featureSet.
-                                //Feature is a graphic
-                                var graphic = resultFeatures[i];
-                                graphic.setSymbol(symbol);
-        
-                                //Set the infoTemplate.
-                                graphic.setInfoTemplate(infoTemplate);
-        
-                                //Add graphic to the map graphics layer.
-                                
-                                map.graphics.add(graphic);
-                                tableResults.push(graphic.attributes);
-                            }
-        
-                            
-                            if (resultFeatures.length == 1){
-                                var capitalExtent = graphicsUtils.graphicsExtent(resultFeatures);
-                                map.centerAndZoom(capitalExtent, 8);
-                            }                 
-                            else{
-                                var capitalsMultiExtent = graphicsUtils.graphicsExtent(resultFeatures);
-                                map.setExtent(capitalsMultiExtent, true);
-                            }
+                  
+                        var resultFeatures = featureSet.features;
+  
+                        var tableResults = [];
+                        //Loop through each feature returned
+                        for (var i=0, il=resultFeatures.length; i<il; i++) {
+                            //Get the current feature from the featureSet.
+                            //Feature is a graphic
+                       		var graphic = resultFeatures[i];
+
+                    		let queryResult = queryCongressDistrict(graphic);
+
+                            tableResults.push(graphic.attributes);
+                        }
+                
+                        if (resultFeatures.length == 1){
+                            var capitalExtent = graphicsUtils.graphicsExtent(resultFeatures);
+                            map.centerAndZoom(capitalExtent, 8);
+                        }                 
+                        else{
+                            var capitalsMultiExtent = graphicsUtils.graphicsExtent(resultFeatures);
+                            map.setExtent(capitalsMultiExtent, true);
+                        }
         
             
                     }
@@ -451,8 +446,7 @@
                         return ((graphic.attributes) && graphic.attributes.NAME === capitalName);
                     });
                     if ( selectedCapital.length ) {
-                        let capitalGeom = selectedCapital[0].geometry; //run .getExtent();
-                        queryCongressDistrict(capitalGeom);
+                    	let capitalGeom = selectedCapital[0].geometry;
                         map.centerAndZoom(capitalGeom, 8);
                     }
 
