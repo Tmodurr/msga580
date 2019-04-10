@@ -5,9 +5,9 @@
         <title>Lab 9 - Thomas Moran</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://js.arcgis.com/3.20/esri/css/esri.css">
-        <link rel="stylesheet" href="https://js.arcgis.com/3.20/dijit/themes/claro/claro.css">
-        <script src="https://js.arcgis.com/3.20/"></script>
+        <link rel="stylesheet" href="https://js.arcgis.com/3.28/esri/css/esri.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.28/dijit/themes/claro/claro.css">
+        <script src="https://js.arcgis.com/3.28/"></script>
         <style>
             
             html, body, .container, #map {
@@ -22,7 +22,7 @@
                 padding:0;
             }
             #table-of-contents{
-                width:20%;
+                width:25%;
             }
 
             #title-block{
@@ -45,7 +45,7 @@
                 border-style: solid;
                 border-width: 1px;
                 border-color: rgb(82, 81, 81);
-                height: 60%;
+                height: 600px;
             }
 
             #where-clause-container{
@@ -60,10 +60,8 @@
     </head>
     
     <script>
-    
-        var map,
-            mapLayers,
-            currentSearchLayer;
+
+      
         require([   
                 "dojo/parser",
                 "dojo/ready",
@@ -71,15 +69,27 @@
                 "dojo/dom-construct", 
                 'dojo/dom-style',
                 'dojo/query',
+                "esri/tasks/query",
+                'esri/tasks/QueryTask',
+                "esri/symbols/SimpleMarkerSymbol",
+                "esri/graphicsUtils",
+                "esri/geometry/Extent",
+                "esri/geometry/Point",
+                "dgrid/Grid",
+                "dgrid/Selection",
+                'dojo/_base/declare',
                 "dojo/dom",
                 "dijit/registry", 
+                "dojo/_base/array",
                 "esri/map",
+                "esri/SpatialReference",
                 "esri/layers/ArcGISDynamicMapServiceLayer",
                 "esri/layers/FeatureLayer",
                 "esri/urlUtils",
                 "esri/arcgis/utils",
                 "esri/dijit/LayerList",
                 "esri/InfoTemplate",
+                "dojo/_base/Color",
                 "esri/renderers/smartMapping",
                 "esri/dijit/Legend",
                 "dijit/form/Select",
@@ -98,25 +108,72 @@
                 domConstruct,
                 domStyle,
                 query, 
+                esriQuery,
+                QueryTask, 
+                SimpleMarkerSymbol,
+                graphicsUtils,
+                Extent, 
+                Point,
+                Grid,
+                Selection,
+                declare,
                 dom,
                 registry,
+                array,
                 Map,
+                SpatialReference,
                 DynamicMapService,
                 FeatureLayer,
                 urlUtils,
                 arcgisUtils,
                 LayerList,
                 InfoTemplate,
+                Color,
                 smartMapping,
                 Legend,
                 Select,
                 RadioButton
             ) {
-                
                 parser.parse();
 
-                const agsURL = 'http://34.239.119.51:6080/arcgis/rest/services/CHANGETHISTONEWIP'
+                var grid, 
+                    map,
+                    mapLayers,
+                    currentSearchLayer,
+                    congressLyr,
+                    capitalsId,
+                    initialExtent;
+      
+                var popInput = dom.byId("pop-search-condition-clause")
+                    capitalInput = dom.byId("capital-search-condition-clause");
 
+              
+
+                const agsURL = 'http://35.175.150.188:6080/arcgis/rest/services'
+                
+                const congressDynamicService = agsURL + '/USA_Congress_Party_111/MapServer';
+                const stateCapitalsDynamicService = agsURL + '/us_state_capitals/MapServer';
+
+                // Create a new constructor by mixing in the components
+                // Allow row selection for the grid
+                var myGrid = declare([Grid, Selection]);
+                
+                //columns for the grid 
+                var columns = [
+                    {'field': 'NAME', 'label': "Capital Name"},
+                    {'field': 'ST', 'label': 'State'},
+                    {'field': 'POP2000', 'label': 'Population in 2000'},
+                ];
+
+
+                // Create an instance of Grid 
+                grid = new myGrid({
+                    columns: columns, 
+                    selectionMode: 'single',
+                    id: 'grid',
+                }, 'grid'); 
+
+                grid.on("dgrid-select", onRowClickHandler);
 
                 on(query('.search-option'),'click',function(){
                     options = this;
@@ -139,61 +196,93 @@
                     }
                 });
              
+                on(query('.search-option'),'change',function(){
+                    clearSearchInputs();
+
+                });
+
                 on(query('#clear-btn'), 'click', function(){
                     clearResults();
+                    clearSearchInputs();
                 });
 
                 on(query('#search-btn'), 'click', function(){
                     clearResults();
                     initSearch(currentSearchLayer);
-
-
                 });
 
                 function init(){     
 
-                    map = new Map("map", {
-                        basemap:"topo",
-                        center: [-100.0850508, 41.647463],
-                        zoom: 4
-                    });
-
                     domStyle.set(dom.byId('capital-search-condition-container'), "display", "block");
                     currentSearchLayer = 'capitals'; //defines default value on page load
                     domStyle.set(dom.byId('pop-search-condition-container'), "display", "none");
+               
+                    // initialExtent = new Extent({xmin:-139.321174,ymin: 23.435867,xmax:-55.181472,ymax:51.891606,spatialReference:{wkid:4326}})
+                    map = new Map("map", {
+                        basemap:"topo",
+                        // extent:initialExtent
+                        center: [-100.0850508, 41.647463],
+                        zoom: 4
+                    });            
+
+                    //Dynamic Map Service
+                    var congressId = "congress-districts";
+                    congressLyr  = new DynamicMapService(congressDynamicService, {
+                        "id": congressId, 
+                        "opacity": 1.0,
+                    });
+                    congressLyr.setVisibleLayers([0, 1]);
+
+                    var capitalsId = "state-capitals";
+                    stateCapitalsLyr  = new DynamicMapService(stateCapitalsDynamicService, {
+                        "id": capitalsId, 
+                        "opacity": 1.0,
+                    });
+
+                    map.addLayers([congressLyr, stateCapitalsLyr]); //layer order in array represents draw order
+                 
                 }
                 
                 function initSearch(currentSearchLayer){
                     //Initializes and validates search
 
                     function __validatePopInputs__(){
-                        let popInput = dom.byId("pop-search-condition-clause").value;
+                       
                         searchOptionsWidget = registry.byId("operator-selector").value; //gets widget
-                        
-                        popInput = parseInt(Math.round(popInput));
 
-                        let invalidNumber = isNaN(popInput);
-                        let empty = (popInput == ""); 
+                        popInputValue = popInput.value;
 
-                        if (invalidNumber || empty || popInput == null){
-                            alert('Please enter a valid population threshold');
-                            return false
+                        if (popInputValue !== ""){   
+                            let invalidNumber = isNaN(popInputValue);
+                            let empty = (popInput == ""); 
+                            popInputValue = parseInt(Math.round(popInput.value));
+
+                            if (invalidNumber || empty || popInput == null){
+                                alert('Please enter a valid population threshold');
+                                return {status: false, content: null, operator: "invalid"}
+                               
+                            }
+                            else{
+                                return {status: true, content: popInputValue, operator: searchOptionsWidget}
+                            }
+
                         }
                         else{
-                            return true
+                            alert('Please enter a valid population threshold');
+                            return {status: false, content: null, operator: "invalid"}
                         }
+                      
                     };
 
                     function __validateCapitalsInputs__(){
-                        let capitalInput = dom.byId("capital-search-condition-clause").value;
-
-                        if (capitalInput == ""){
+                        let capitalInputValue = capitalInput.value
+                        if (capitalInputValue == ""){
                             alert('Please enter a keyword of the capital name!');
-                            return false
+                            return {status: false, content: null, operator: "not-needed"}
                         }
 
                         else{
-                            return true
+                            return {status: true, content: capitalInputValue, operator: "not-needed"}
                         }
 
                         console.log(capitalInput);
@@ -201,35 +290,172 @@
 
                     if (currentSearchLayer === "pop2000"){
                         console.log('validating pop layer');
-                        let queryReady = __validatePopInputs__();
+                        let query = __validatePopInputs__();
                        
-                        if(queryReady){
-                            executeQuery('pop2000');
+                        if(query.status){
+                            executeQuery('pop2000',query.content, query.operator);
                         }
 
                        
                     }
                     else if (currentSearchLayer === "capitals"){
                         console.log('validating capitals layer');
-                        let queryReady = __validateCapitalsInputs__();
-                        if(queryReady){
-                            executeQuery('capitals');
+                        let query = __validateCapitalsInputs__();
+                        if(query.status){
+                            executeQuery('capitals',query.content, query.operator)
                         }
                     }
                     else{
-                        alert("Current Layer ${currentSearchLayer} is not supported for search");
+                        alert(`Current Layer ${currentSearchLayer} is not supported for search"`);
                     }
                 }
 
-                function executeQuery(layer){
 
+                function executeQuery(searchField, searchValue, operator){                
+                    //Create Find Task using the URL of the map service to search
+                    
+                    var queryTask = new QueryTask(stateCapitalsDynamicService + "/0");
                     console.log('executing query');
+                    var query = new esriQuery();
+                        query.returnGeometry = true;
+                        query.outFields = ["NAME", "ST", "POP2000"];
+                        let sr = new SpatialReference(102100);
+                        query.outSpatialReference = sr; 
+                        
+                    if (searchField === 'capitals'){
+                        query.where = `NAME LIKE '%${searchValue}%'`
+
+                    }   
+                    else{
+                        query.where = "POP2000" + " " + operator + " " + searchValue ;
+                    }  
+                    // query.text = popValue; //shorthand for where clause using displayname in map service
+                    queryTask.execute(query, showResults)
+
+                }
+        
+
+                function setBindedPopup(results){
+
+                    let party = results.features[0].attributes.PARTY 
+                    let districtID = results.features[0].attributes.DISTRICTID 
+                   
+
+                    var symbol = new SimpleMarkerSymbol();
+                            symbol.setStyle(SimpleMarkerSymbol.STYLE_SQUARE);
+                            symbol.setSize(10);
+                            symbol.setColor(new Color([255,255,0,0.8]));
+
+
+                    map.infoWindow.setTitle(title);
+                    map.infoWindow.setContent(content)
 
                 }
 
+
+
+                function queryCongressDistrict(point){
+
+                    var queryTask = new QueryTask(congressDynamicService + "/1");
+                    console.log('executing query');
+                    var query = new esriQuery();
+                        query.returnGeometry = false;
+                        query.outFields = ["PARTY", "DISTRICTID"];
+                        let sr = new SpatialReference(102100);
+                        query.outSpatialReference = sr; 
+                        query.geometry = point;
+                        queryTask.execute(query, setBindedPopup)
+
+
+                }
+
+
                 function clearResults(){
-                    let results = dom.byId('search-results');
-                    results.innerHTML = ""; 
+                    // let results = dom.byId('grid');
+                    map.graphics.clear();   
+                    grid.refresh();
+                    grid.renderArray([]); //hacky way to clear   
+                    let resetLocation = new Point(-98.335506, 40.156015, new SpatialReference({ wkid: 4326 }));
+                    map.centerAndZoom(resetLocation,4);
+                    map.infoWindow.hide()
+                }
+
+                function clearSearchInputs(){
+                    popInput.value = "";
+                    capitalInput.value = "";
+                    clearResults();
+                }
+
+                function showResults(featureSet) { //This function works with an array of FindResult that the task returns
+                  
+                    let featureCount = featureSet.features.length
+                    if (featureCount >= 1){
+                            
+                        // featureSet = results.features;
+                        map.graphics.clear();
+                            
+                            //initialize InfoTemplate
+                            var infoTemplate = new InfoTemplate("${NAME}", "Name : ${NAME}<br/> State : ${ST}<br />Population : ${POP2000}");
+        
+                            //create symbol for selected features
+                            var symbol = new SimpleMarkerSymbol();
+                            symbol.setStyle(SimpleMarkerSymbol.STYLE_SQUARE);
+                            symbol.setSize(10);
+                            symbol.setColor(new Color([255,255,0,0.8]));
+                            
+                            var resultFeatures = featureSet.features;
+        
+                            var tableResults = [];
+                            //Loop through each feature returned
+                            for (var i=0, il=resultFeatures.length; i<il; i++) {
+                                //Get the current feature from the featureSet.
+                                //Feature is a graphic
+                                var graphic = resultFeatures[i];
+                                graphic.setSymbol(symbol);
+        
+                                //Set the infoTemplate.
+                                graphic.setInfoTemplate(infoTemplate);
+        
+                                //Add graphic to the map graphics layer.
+                                
+                                map.graphics.add(graphic);
+                                tableResults.push(graphic.attributes);
+                            }
+        
+                            
+                            if (resultFeatures.length == 1){
+                                var capitalExtent = graphicsUtils.graphicsExtent(resultFeatures);
+                                map.centerAndZoom(capitalExtent, 8);
+                            }                 
+                            else{
+                                var capitalsMultiExtent = graphicsUtils.graphicsExtent(resultFeatures);
+                                map.setExtent(capitalsMultiExtent, true);
+                            }
+        
+            
+                    }
+
+                    else{
+                        alert('No results found');
+                    }
+
+                    grid.refresh();
+                    grid.renderArray(tableResults);
+
+                }
+
+                function onRowClickHandler(evt) {
+                   
+                    let capitalName = evt.rows[0].data.NAME;
+                    var selectedCapital = array.filter(map.graphics.graphics, function (graphic) {
+                        return ((graphic.attributes) && graphic.attributes.NAME === capitalName);
+                    });
+                    if ( selectedCapital.length ) {
+                        let capitalGeom = selectedCapital[0].geometry; //run .getExtent();
+                        queryCongressDistrict(capitalGeom);
+                        map.centerAndZoom(capitalGeom, 8);
+                    }
+
                 }
 
                 init();
@@ -265,8 +491,10 @@
                         </span>
                         <span class="where-clause-container" id="pop-search-condition-container" >
                                 <select id="operator-selector" name="operator-selector" data-dojo-type="dijit/form/Select">
-                                    <option value="greaterThan" selected="selected">&gt;</option>
-                                    <option value="lessThan" >&lt;</option>
+                                    <option value="&gt;" selected="selected">&gt;</option>
+                                    <option value="&lt;" >&lt;</option>
+                                    <!-- <option value="greaterThan" selected="selected">&gt;</option>
+                                    <option value="lessThan" >&lt;</option> -->
                                 </select>
                                 <input type="text" id="pop-search-condition-clause" name="pop-search-clause" required minlength="1"  size="20">     
                         </span>
@@ -280,9 +508,10 @@
                         </div>
                     </form>
                 </div>
-                <div id="search-results-container" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
-                    <div id="search-results"></div>
-                </div>      
+                <div id="grid" style="height: 600px;"></div>
+                <!-- <div id="search-results-container" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
+                    <div id="grid"></div>
+                </div>       -->
             </div>
             <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
         </div>
