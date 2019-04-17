@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>Lab 9 - Thomas Moran</title>
+		<meta name="description" content="">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="https://js.arcgis.com/3.28/esri/css/esri.css">
+		<link rel="stylesheet" href="https://js.arcgis.com/3.28/dijit/themes/claro/claro.css">
+		<script src="https://js.arcgis.com/3.28/"></script>
+		<style>
+			
+			html, body, .container, #map {
+					height:100%;
+					width:100%;
+					margin:0;
+					padding:0;
+					margin:0;
+					font-family: "Open Sans";
+							}
+			#map {
+				padding:0;
+			}
+			#table-of-contents{
+				width:25%;
+			}
+
+			#title-block{
+				color: white;
+				background-color: rgb(8, 8, 99)
+			}
+
+			#search-title{
+				color: white;
+				background-color: rgb(83, 30, 83);
+				display: block;
+				font-weight: bold;
+			}
+
+
+			#buffer-btn{
+
+				display: flex;
+				align-items: center;
+				justify-content: center;
+
+			}
+
+
+			#search-condition-btn-container{
+				padding-top: 5px;
+			}
+
+			#search-results-container{
+				border-style: solid;
+				border-width: 1px;
+				border-color: rgb(82, 81, 81);
+				height: 600px;
+			}
+
+			#geocoding-description{
+				padding-top: 5px;
+			}
+
+			#where-clause-container{
+				padding: 2px;
+				display: block;
+			}
+			.search-option{
+				display: inline-block;
+			}
+
+			#horizontal-slider{
+				padding-top: 10px;
+			}
+
+
+
+		
+		</style>
+	</head>
+	
+	<script>
+
+	  
+		require([   
+				"dojo/parser",
+				"dojo/ready",
+				"dojo/on",
+				"dojo/dom-construct", 
+				'dojo/dom-style',
+				'dojo/query',
+				"esri/tasks/query",
+				'esri/tasks/QueryTask',
+				"esri/symbols/SimpleMarkerSymbol",
+				"esri/graphicsUtils",
+				"esri/geometry/Extent",
+				"esri/geometry/Point",
+				"dgrid/Grid",
+				"dgrid/Selection",
+				'dojo/_base/declare',
+				"dojo/dom",
+				"dijit/registry", 
+				"dojo/_base/array",
+				"esri/map",
+				"esri/SpatialReference",
+				"esri/layers/ArcGISDynamicMapServiceLayer",
+				"esri/layers/FeatureLayer",
+				"esri/urlUtils",
+				"esri/arcgis/utils",
+				"esri/dijit/LayerList",
+				"esri/InfoTemplate",
+				"dojo/_base/Color",
+				"esri/renderers/smartMapping",
+				"esri/dijit/Legend",
+				"dijit/form/Select",
+				"dijit/form/RadioButton",
+				"dijit/form/HorizontalSlider",
+				"dijit/form/HorizontalRule",
+				"dijit/form/HorizontalRuleLabels",
+				"dojo/aspect",
+				"dijit/form/Button",
+				"dijit/_WidgetBase", //start undeclared
+				"dijit/layout/BorderContainer",
+				"dijit/layout/ContentPane",
+				"dijit/layout/TabContainer",
+				"dojo/domReady!"
+			],
+			function(
+				parser,
+				ready,
+				on,
+				domConstruct,
+				domStyle,
+				query, 
+				esriQuery,
+				QueryTask, 
+				SimpleMarkerSymbol,
+				graphicsUtils,
+				Extent, 
+				Point,
+				Grid,
+				Selection,
+				declare,
+				dom,
+				registry,
+				array,
+				Map,
+				SpatialReference,
+				DynamicMapService,
+				FeatureLayer,
+				urlUtils,
+				arcgisUtils,
+				LayerList,
+				InfoTemplate,
+				Color,
+				smartMapping,
+				Legend,
+				Select,
+				RadioButton,
+				HorizontalSlider,
+				HorizontalRule,
+				HorizontalRuleLabels,
+				aspect
+			) {
+				parser.parse();      
+
+                const agsURL = 'http://35.175.150.188:6080/arcgis/rest/services'
+                const blockGroupService = agsURL + '/Travis_Pop2010/MapServer';
+
+				function init(){     
+			   
+					// initialExtent = new Extent({xmin:-139.321174,ymin: 23.435867,xmax:-55.181472,ymax:51.891606,spatialReference:{wkid:4326}})
+					map = new Map("map", {
+						basemap:"topo",
+						// extent:initialExtent
+						center: [-97.83298, 30.2225],
+						zoom: 10
+					});    
+
+
+					var blocksID = "travis-county-blocks";
+                    travisCountyBlocksLyr  = new DynamicMapService(blockGroupService, {
+                        "id": blocksID, 
+                        "opacity": .6,
+                    });
+                    //travisCountyBlocksLyr.setVisibleLayers([0]);      -- multilayer methods  
+                    //map.addLayers([travisCountyBlocksLyr]);
+					map.addLayer(travisCountyBlocksLyr);
+				  
+				}
+				// var horizontalSlider = new HorizontalSlider({labels: ["0", "1", "2", "3", "4", "5"]}, "horizontal-slider"); -- programatic standup not declarative
+				// var horizontalSlider = new HorizontalSlider({discreteValues: 6, showButtons: false}, "horizontal-slider").startup();
+				
+				var horizontalSlider = registry.byId("horizontal-slider"), 
+				    bufferLabel = dom.byId("bufferValue"),
+				    bufferSearchBtn = dom.byId("buffer-btn"),
+				    geocodingContents = dom.byId("geocoding-contents");
+
+
+				function updateHorizontalLabel() {
+					bufferLabel.innerHTML = horizontalSlider.get("value");
+				}
+
+				aspect.after(horizontalSlider, "onChange", updateHorizontalLabel, true);
+				updateHorizontalLabel();
+
+				function executeBuffer(){
+					console.log("Executing Buffer.");
+				}
+
+				function executeGeocode	(){
+					let addressContent = geocodingContents.value;
+					let addressContentLength = addressContent.length;
+					if (addressContentLength >= 1){
+						console.log(addressContent);
+					}
+					else{
+						alert('Please enter at least one address!')
+					}
+
+					console.log("Executing Geocode.");
+					console.log();
+				}
+
+
+				on(query('#buffer-btn'), 'click', function(){
+                    executeBuffer();
+                });
+
+				on(query('#geocode-btn'), 'click', function(){
+                    executeGeocode();
+                });
+
+
+
+
+
+
+				init();
+
+			});
+	
+	</script>
+	
+	<body class="claro">
+		<div class="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline',gutters:false">
+			<div id="title-block" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
+				<div id="title"><h2>2010 Population Map of Travis County, Texas</h2></div>
+			</div>
+			<div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
+				<div id="geocoding-container" style="height: 70%;" class="pane-container" data-dojo-type="dijit/layout/ContentPane">             
+					<div id="search-title">Geocoding Addresses</div>   
+					<div id="geocoding-description">
+						Please copy your addresses into the text area below <br>
+						Each address should start in a new line. 
+					</div>
+					<textarea id="geocoding-contents" rows="25" cols="50"></textarea>
+					<button id="geocode-btn" data-dojo-type="dijit/form/Button" type="button">
+                        Geocode
+                    </button>
+
+
+				</div>
+				<div id="buffer-container" style="height: 30%;" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
+					<div id="search-title">Buffering Locations</div>   
+					<div id="slider-container" style="padding-top: 10px;">
+						<input id="horizontal-slider" type="range" value="0"
+								data-dojo-type="dijit/form/HorizontalSlider"
+								data-dojo-props="
+									minimum: 0,
+									maximum: 5,
+									showButtons: false,
+									discreteValues: 6">
+						<div data-dojo-type="dijit/form/HorizontalRule"
+						data-dojo-props="
+							container: 'bottomDecoration',
+							count: 6"
+							style="height: 5px;">    
+						</div>
+						<ol data-dojo-type="dijit/form/HorizontalRuleLabels"
+							data-dojo-props="
+								container: 'bottomDecoration'"
+							style="height: 1em;">
+							<li>0</li>
+							<li>1</li>
+							<li>2</li>
+							<li>3</li>
+							<li>4</li>
+							<li>5</li>
+						</ol>
+
+						<div style="padding-top: 10px; text-align: center;">Value: <strong id="bufferValue"></strong></div>
+				 	</div>
+				 	<button id="buffer-btn" data-dojo-type="dijit/form/Button" type="button">
+                        Buffer
+                    </button>
+				</div>          
+			</div>
+			<div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
+		</div>
+	</body>
+
+</html>
+
+
+	
