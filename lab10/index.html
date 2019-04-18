@@ -93,9 +93,12 @@
 				"esri/tasks/query",
 				'esri/tasks/QueryTask',
 				"esri/symbols/SimpleMarkerSymbol",
+				"esri/tasks/ParameterValue",
 				"esri/graphicsUtils",
 				"esri/graphic", 
 				"esri/geometry/Extent",
+				"esri/tasks/LinearUnit",
+				"esri/tasks/FeatureSet",
 				"esri/tasks/locator", 
 				"esri/geometry/Point",
 				"dgrid/Grid",
@@ -108,6 +111,7 @@
 				"esri/SpatialReference",
 				"esri/layers/ArcGISDynamicMapServiceLayer",
 				"esri/layers/FeatureLayer",
+				"esri/tasks/Geoprocessor",
 				"esri/urlUtils",
 				"esri/arcgis/utils",
 				"esri/dijit/LayerList",
@@ -138,9 +142,12 @@
 				esriQuery,
 				QueryTask, 
 				SimpleMarkerSymbol,
+				ParameterValue,
 				graphicsUtils,
 				Graphic,
 				Extent, 
+				LinearUnit,
+				FeatureSet,
 				Locator,
 				Point,
 				Grid,
@@ -153,6 +160,7 @@
 				SpatialReference,
 				DynamicMapService,
 				FeatureLayer,
+				Geoprocessor,
 				urlUtils,
 				arcgisUtils,
 				LayerList,
@@ -174,13 +182,14 @@
 
 				const geocodingServer = 'http://35.175.150.188:6080/arcgis/rest/services/Austin_Streets/GeocodeServer';
 				const locator = new Locator(geocodingServer);
+
+				const populationService = 'http://35.175.150.188:6080/arcgis/rest/services/PopulationModel/GPServer/PopulationModel'
 	
 				var horizontalSlider = registry.byId("horizontal-slider"), 
 					bufferLabel = dom.byId("bufferValue"),
 					bufferSearchBtn = dom.byId("buffer-btn"),
 					geocodingContents = dom.byId("geocoding-contents"),
 					bufferLayer;
-
 
 				function init(){     
 			   
@@ -199,26 +208,23 @@
 					map.addLayer(travisCountyBlocksLyr);
 
 					bufferLayer = new esri.layers.GraphicsLayer();
-
+					bufferLayer.spatialReference = {wkid: 102100};
+					map.addLayer(bufferLayer);
 				}
 				
 				function updateHorizontalLabel() {
 					bufferLabel.innerHTML = horizontalSlider.get("value");
 				}
 
-				function executeBuffer(){
+				function clearGraphics(){
+					map.graphics.clear();
+					bufferLayer.clear();
 
-					let graphicsLength = map.graphics.graphics.length; 
-					let inputGraphics = map.graphics.graphics;
-					
+				}
 
-					let gpTask = ""; 
-					let gpResults;
-
-
-
-					if (graphicsLength >= 1){
-						console.log("Executing Buffer.");
+				function showBuffers(results){ //callback from ExecuteBuffer, stored in array of ParameterValue{dataType, paramName, value}
+	
+						let bufferedResults = results.results[0].value.features;
 
 						var symbol = new esri.symbol.SimpleFillSymbol(
 							esri.symbol.SimpleFillSymbol.STYLE_SOLID,
@@ -229,37 +235,68 @@
 							new dojo.Color([0,0,255,0.35])
 						);
 
-						dojo.forEach(bufferedResults, function(geometry) {
-							let graphic = new esri.Graphic(geometry,symbol);
+						dojo.forEach(bufferedResults, function(res) {
+							let geom = res.geometry;
+							// let graphic = new esri.Graphic(geometry,symbol);
+							let pop2010 = res.attributes.POP2010;
+							let attr = {"Population": pop2010}
 							let bufferInfoTemplate = new InfoTemplate( 
 								"Population in the buffer zone", 
-								"Total Population: ${population}"
-							);
-							graphic.setInfoTemplate(bufferInfoTemplate);
-							map.graphics.add(graphic);
+								"Total Population: ${Population}"
+							);					
+							let graphic = new Graphic(geom,symbol,attr,bufferInfoTemplate);
+
+							bufferLayer.add(graphic);
 						});
 
+				}
 
-						console.log(bufferLayer);
+				function executeBuffer(){
 
+					bufferLayer.clear();
+					let graphicsLength = map.graphics.graphics.length; 
+					let inputGraphics = map.graphics.graphics;			
 
+					if (graphicsLength >= 1){
 
+						let sliderValue = horizontalSlider.value; 
 
+						if (sliderValue !== 0){
 
+							console.log("Executing Buffer.");
+
+							var bufferGPtask = new Geoprocessor(populationService);
+							bufferGPtask.setOutputSpatialReference(map.spatialReference);
+							bufferGPtask.setProcessSpatialReference(map.spatialReference);
+							
+						
+							console.log("Value for buffer should be" + sliderValue)
+							var bufferDistanceValue = new LinearUnit();
+							bufferDistanceValue.distance = Number(sliderValue); 
+							bufferDistanceValue.units = 'esriKilometers';
+
+							let inputFeatures = new FeatureSet();
+							inputFeatures.features = inputGraphics
+
+							let inputParameters = {
+								Input_Locations: inputFeatures , 
+								Distance: bufferDistanceValue, 
+							};
+
+							bufferGPtask.execute(inputParameters);
+
+							bufferGPtask.on("execute-complete", showBuffers);
+						}
 					}
+
 					else{
 						alert("You don't have geocoded addresses for buffering");
 					}
-
-
 					
 				}
 
 				function addResults(candidateLength, results){
-					
-					map.graphics.clear();
-			
-
+				
 					let geocodeScoreMinimum = 80; //values equal or under will be removed
 					let extents = [];
 					let validCandidates = 0; 
@@ -312,6 +349,7 @@
 				}
 
 				function executeGeocode	(){
+					clearGraphics();
 					let addressContent = geocodingContents.value;
 					let addressContentLength = addressContent.length;
 					let addressCandidates = [];
@@ -411,7 +449,7 @@
 							<li>5</li>
 						</ol>
 
-						<div style="padding-top: 10px; text-align: center;">Value: <strong id="bufferValue"></strong></div>
+						<div style="padding-top: 10px; text-align: center;">Distance: <strong id="bufferValue"></strong> kilometres</div>
 					</div>
 					<button id="buffer-btn" data-dojo-type="dijit/form/Button" type="button">
 						Buffer
@@ -448,6 +486,15 @@
 
 
 
+	let graphic = new esri.Graphic(geometry,symbol);
+							graphic.attr = 
+							let bufferInfoTemplate = new InfoTemplate( 
+								"Population in the buffer zone", 
+								"Total Population: ${population}"
+							);
+							graphic.setInfoTemplate(bufferInfoTemplate);
+							
+							let graphic = new Graphic(pt,sms,attr,infoTemplate);
 
 
 					-->
