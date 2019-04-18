@@ -94,7 +94,9 @@
 				'esri/tasks/QueryTask',
 				"esri/symbols/SimpleMarkerSymbol",
 				"esri/graphicsUtils",
+				"esri/graphic", 
 				"esri/geometry/Extent",
+				"esri/tasks/locator", 
 				"esri/geometry/Point",
 				"dgrid/Grid",
 				"dgrid/Selection",
@@ -137,7 +139,9 @@
 				QueryTask, 
 				SimpleMarkerSymbol,
 				graphicsUtils,
+				Graphic,
 				Extent, 
+				Locator,
 				Point,
 				Grid,
 				Selection,
@@ -165,77 +169,194 @@
 			) {
 				parser.parse();      
 
-                const agsURL = 'http://35.175.150.188:6080/arcgis/rest/services'
-                const blockGroupService = agsURL + '/Travis_Pop2010/MapServer';
+				const agsURL = 'http://35.175.150.188:6080/arcgis/rest/services'
+				const blockGroupService = agsURL + '/Travis_Pop2010/MapServer';
+
+				const geocodingServer = 'http://35.175.150.188:6080/arcgis/rest/services/Austin_Streets/GeocodeServer';
+				const locator = new Locator(geocodingServer);
+	
+				var horizontalSlider = registry.byId("horizontal-slider"), 
+					bufferLabel = dom.byId("bufferValue"),
+					bufferSearchBtn = dom.byId("buffer-btn"),
+					geocodingContents = dom.byId("geocoding-contents"),
+					bufferLayer;
+
 
 				function init(){     
 			   
-					// initialExtent = new Extent({xmin:-139.321174,ymin: 23.435867,xmax:-55.181472,ymax:51.891606,spatialReference:{wkid:4326}})
 					map = new Map("map", {
 						basemap:"topo",
-						// extent:initialExtent
 						center: [-97.83298, 30.2225],
 						zoom: 10
 					});    
 
 
 					var blocksID = "travis-county-blocks";
-                    travisCountyBlocksLyr  = new DynamicMapService(blockGroupService, {
-                        "id": blocksID, 
-                        "opacity": .6,
-                    });
-                    //travisCountyBlocksLyr.setVisibleLayers([0]);      -- multilayer methods  
-                    //map.addLayers([travisCountyBlocksLyr]);
+					travisCountyBlocksLyr  = new DynamicMapService(blockGroupService, {
+						"id": blocksID, 
+						"opacity": .6,
+					});
 					map.addLayer(travisCountyBlocksLyr);
-				  
+
+					bufferLayer = new esri.layers.GraphicsLayer();
+
 				}
-				// var horizontalSlider = new HorizontalSlider({labels: ["0", "1", "2", "3", "4", "5"]}, "horizontal-slider"); -- programatic standup not declarative
-				// var horizontalSlider = new HorizontalSlider({discreteValues: 6, showButtons: false}, "horizontal-slider").startup();
 				
-				var horizontalSlider = registry.byId("horizontal-slider"), 
-				    bufferLabel = dom.byId("bufferValue"),
-				    bufferSearchBtn = dom.byId("buffer-btn"),
-				    geocodingContents = dom.byId("geocoding-contents");
-
-
 				function updateHorizontalLabel() {
 					bufferLabel.innerHTML = horizontalSlider.get("value");
 				}
 
-				aspect.after(horizontalSlider, "onChange", updateHorizontalLabel, true);
-				updateHorizontalLabel();
-
 				function executeBuffer(){
-					console.log("Executing Buffer.");
+
+					let graphicsLength = map.graphics.graphics.length; 
+					let inputGraphics = map.graphics.graphics;
+					
+
+					let gpTask = ""; 
+					let gpResults;
+
+
+
+					if (graphicsLength >= 1){
+						console.log("Executing Buffer.");
+
+						var symbol = new esri.symbol.SimpleFillSymbol(
+							esri.symbol.SimpleFillSymbol.STYLE_SOLID,
+							new esri.symbol.SimpleLineSymbol(
+							  esri.symbol.SimpleLineSymbol.STYLE_SOLID,
+							  new dojo.Color([0,0,255,0.65]), 2
+							),
+							new dojo.Color([0,0,255,0.35])
+						);
+
+						dojo.forEach(bufferedResults, function(geometry) {
+							let graphic = new esri.Graphic(geometry,symbol);
+							let bufferInfoTemplate = new InfoTemplate( 
+								"Population in the buffer zone", 
+								"Total Population: ${population}"
+							);
+							graphic.setInfoTemplate(bufferInfoTemplate);
+							map.graphics.add(graphic);
+						});
+
+
+						console.log(bufferLayer);
+
+
+
+
+
+					}
+					else{
+						alert("You don't have geocoded addresses for buffering");
+					}
+
+
+					
+				}
+
+				function addResults(candidateLength, results){
+					
+					map.graphics.clear();
+			
+
+					let geocodeScoreMinimum = 80; //values equal or under will be removed
+					let extents = [];
+					let validCandidates = 0; 
+					for( var i = 0; i < results.length; i++){//removes score under the geocode score threshold
+						let currentAddressResult = results[i];
+						let currentScore = currentAddressResult.score;
+				
+						if (currentScore > geocodeScoreMinimum) {
+							validCandidates += 1;
+							// 1. set point
+							// 2. set simple marker symbol
+							// 3. set attributes
+							// 4. set infotemplate
+							let x = currentAddressResult.location.x;
+							let y = currentAddressResult.location.y;
+							extents.push(currentAddressResult.location);
+
+							let pt = new Point(x,y, map.spatialReference); // #1
+
+							let sms = new SimpleMarkerSymbol().setStyle( // #2
+								SimpleMarkerSymbol.STYLE_SQUARE).setColor(
+									new Color([255,0,0,0.5])
+								)
+							let attr = {"Address": currentAddressResult.address,"Score": currentScore}; // #3
+
+							var infoTemplate = new InfoTemplate( 
+								"Location", 
+								"Address: ${Address}<br />Score: ${Score}"
+							);
+
+							let graphic = new Graphic(pt,sms,attr,infoTemplate);
+
+							map.graphics.add(graphic);
+
+						}
+						else{
+							continue; //continue if score is not met
+						}
+
+					}
+					
+					let geocodedAddressesExtent = graphicsUtils.graphicsExtent(map.graphics.graphics)
+					map.setExtent(geocodedAddressesExtent, true);
+					alert(`${validCandidates} out of ${candidateLength} addresses were successfully geocoded!`);
+
+				}
+
+				function geocodeFailure(err){
+					alert('Geocoding did not execute properly! Please rerun!');
 				}
 
 				function executeGeocode	(){
 					let addressContent = geocodingContents.value;
 					let addressContentLength = addressContent.length;
+					let addressCandidates = [];
+
 					if (addressContentLength >= 1){
-						console.log(addressContent);
+						// console.log(addressContent);
+						let addresses = addressContent.replace(/\r\n/g, "\n").split("\n");
+						let addressCount = addresses.length;
+
+						for (var i = 1; i < addressCount; i++) {
+							let currentAddress = addresses[i];
+							
+							//wanted to use new operator here but property with spaces doesnt work as class property
+							let currentAddressCandidate = {
+							  "OBJECTID": i,
+							  "Single Line Input": currentAddress
+							}
+
+							addressCandidates.push(currentAddressCandidate)
+						}
+
+						var options = {
+							addresses: addressCandidates
+						}
+
+						locator.outSpatialReference = map.spatialReference;
+						locator.addressesToLocations(options, addResults.bind(this, addressCount), geocodeFailure)
 					}
 					else{
 						alert('Please enter at least one address!')
 					}
-
 					console.log("Executing Geocode.");
-					console.log();
+
 				}
 
+				aspect.after(horizontalSlider, "onChange", updateHorizontalLabel, true);
+				updateHorizontalLabel();
 
 				on(query('#buffer-btn'), 'click', function(){
-                    executeBuffer();
-                });
+					executeBuffer();
+				});
 
 				on(query('#geocode-btn'), 'click', function(){
-                    executeGeocode();
-                });
-
-
-
-
-
+					executeGeocode();
+				});
 
 				init();
 
@@ -255,10 +376,10 @@
 						Please copy your addresses into the text area below <br>
 						Each address should start in a new line. 
 					</div>
-					<textarea id="geocoding-contents" rows="25" cols="50"></textarea>
+					<textarea id="geocoding-contents" rows="25" cols="60"></textarea>
 					<button id="geocode-btn" data-dojo-type="dijit/form/Button" type="button">
-                        Geocode
-                    </button>
+						Geocode
+					</button>
 
 
 				</div>
@@ -291,10 +412,10 @@
 						</ol>
 
 						<div style="padding-top: 10px; text-align: center;">Value: <strong id="bufferValue"></strong></div>
-				 	</div>
-				 	<button id="buffer-btn" data-dojo-type="dijit/form/Button" type="button">
-                        Buffer
-                    </button>
+					</div>
+					<button id="buffer-btn" data-dojo-type="dijit/form/Button" type="button">
+						Buffer
+					</button>
 				</div>          
 			</div>
 			<div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
@@ -303,5 +424,30 @@
 
 </html>
 
+<!-- 
+	// for( var i = 0; i < results.length; i++){ 
+					//    let currentAddressResult = results[i];
+					//    let currentScore = currentAddressResult.score;
+					//    if ( currentScore <= geocodeScoreMinimum) {
+					//      results.splice(i, 1); 
+					//      i--;
+					//    }
+					// } 
 
-	
+
+
+
+	//travisCountyBlocksLyr.setVisibleLayers([0]);      -- multilayer methods  
+					//map.addLayers([travisCountyBlocksLyr]);
+
+
+
+					// var horizontalSlider = new HorizontalSlider({labels: ["0", "1", "2", "3", "4", "5"]}, "horizontal-slider"); -- programatic standup not declarative
+					// var horizontalSlider = new HorizontalSlider({discreteValues: 6, showButtons: false}, "horizontal-slider").startup();
+				  
+
+
+
+
+
+					-->
