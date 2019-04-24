@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>Lab 9 - Thomas Moran</title>
+		<meta name="description" content="">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="https://js.arcgis.com/3.28/esri/css/esri.css">
+		<link rel="stylesheet" href="https://js.arcgis.com/3.28/dijit/themes/claro/claro.css">
+		<script src="https://js.arcgis.com/3.28/"></script>
+		<style>
+			
+            html,body{height:100%;width:100%;margin:0;overflow:hidden;}
+            #map{
+                padding:0;
+            }
+            #header{
+                font-size: 1.1em;
+                font-family: sans-serif;
+                padding-left: 1em;
+                padding-top:4px;
+                color:#ffffff;
+                background: rgb(10, 10, 126);
+                font-weight: bold;
+            }
+		
+		</style>
+	</head>
+	
+	<script>
+	  
+		require([   
+				"dojo/parser",
+				"dojo/ready",
+				"dojo/on",
+				"dojo/dom-construct", 
+				'dojo/dom-style',
+				'dojo/query',
+				"esri/tasks/query",
+				'esri/tasks/QueryTask',
+				"esri/symbols/SimpleMarkerSymbol",
+				"esri/tasks/ParameterValue",
+				"esri/graphicsUtils",
+				"esri/graphic", 
+				"esri/geometry/Extent",
+				"esri/tasks/LinearUnit",
+				"esri/tasks/FeatureSet",
+				"esri/tasks/locator", 
+				"esri/geometry/Point",
+				"dgrid/Grid",
+				"dgrid/Selection",
+				'dojo/_base/declare',
+				"dojo/dom",
+				"dijit/registry", 
+				"dojo/_base/array",
+				"esri/map",
+				"esri/SpatialReference",
+				"esri/layers/ArcGISDynamicMapServiceLayer",
+				"esri/layers/FeatureLayer",
+				"esri/tasks/Geoprocessor",
+				"esri/urlUtils",
+				"esri/arcgis/utils",
+				"esri/dijit/LayerList",
+				"esri/InfoTemplate",
+				"dojo/_base/Color",
+				"esri/renderers/smartMapping",
+				"esri/dijit/Legend",
+				"dijit/form/Select",
+				"dijit/form/RadioButton",
+				"dijit/form/HorizontalSlider",
+				"dijit/form/HorizontalRule",
+				"dijit/form/HorizontalRuleLabels",
+				"dojo/aspect",
+				"dijit/form/Button",
+				"dijit/_WidgetBase", //start undeclared
+				"dijit/layout/BorderContainer",
+				"dijit/layout/ContentPane",
+				"dijit/layout/TabContainer",
+				"dojo/domReady!"
+			],
+			function(
+				parser,
+				ready,
+				on,
+				domConstruct,
+				domStyle,
+				query, 
+				esriQuery,
+				QueryTask, 
+				SimpleMarkerSymbol,
+				ParameterValue,
+				graphicsUtils,
+				Graphic,
+				Extent, 
+				LinearUnit,
+				FeatureSet,
+				Locator,
+				Point,
+				Grid,
+				Selection,
+				declare,
+				dom,
+				registry,
+				array,
+				Map,
+				SpatialReference,
+				DynamicMapService,
+				FeatureLayer,
+				Geoprocessor,
+				urlUtils,
+				arcgisUtils,
+				LayerList,
+				InfoTemplate,
+				Color,
+				smartMapping,
+				Legend,
+				Select,
+				RadioButton,
+				HorizontalSlider,
+				HorizontalRule,
+				HorizontalRuleLabels,
+				aspect
+			) {
+				parser.parse();      
+				const agsURL = 'http://52.91.227.125:6080/arcgis/rest/services'
+                const statesService = agsURL + 'us_states_service/MapServer/0';
+			
+				function init(){     
+			   
+					map = new Map("map", {
+						basemap:"topo",
+						center: [-97.83298, 36.2225],
+						zoom: 4
+					});    
+					
+                    var statesID = "us-states";
+					statesServiceLyr  = new DynamicMapService(statesService, {
+						"id": statesID, 
+						"opacity": .9,
+					});
+					map.addLayer(statesServiceLyr);
+				}	
+			
+				init();
+			});
+	
+	</script>
+	
+    <body class="claro">
+        <div id="main" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'sidebar'" style="height:width:100%;height:100%;">
+          <div data-dojo-type="dijit/layout/ContentPane" id="header" data-dojo-props="region:'top'">
+                Where are you from? 
+          </div>
+          <div data-dojo-type="dijit/layout/ContentPane" id="map" data-dojo-props="region:'center'"></div>
+          <div id="bot" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'bottom', splitter:true" style="height:20%">
+          <div id="myTableNode"></div>
+        </div>
+        </div>
+      </body>
+
+</html>
