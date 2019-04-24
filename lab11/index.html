@@ -2,7 +2,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
-		<title>Lab 9 - Thomas Moran</title>
+		<title>Lab 11 - Thomas Moran</title>
 		<meta name="description" content="">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" href="https://js.arcgis.com/3.28/esri/css/esri.css">
@@ -23,6 +23,10 @@
                 background: rgb(10, 10, 126);
                 font-weight: bold;
             }
+			#tp2{
+				width: 20%;
+				padding-top: 10px;
+			}
 		
 		</style>
 	</head>
@@ -54,6 +58,7 @@
 				"dijit/registry", 
 				"dojo/_base/array",
 				"esri/map",
+				"dijit/TitlePane",
 				"esri/SpatialReference",
 				"esri/layers/ArcGISDynamicMapServiceLayer",
 				"esri/layers/FeatureLayer",
@@ -103,6 +108,7 @@
 				registry,
 				array,
 				Map,
+				TitlePane,
 				SpatialReference,
 				DynamicMapService,
 				FeatureLayer,
@@ -123,10 +129,11 @@
 			) {
 				parser.parse();      
 				const agsURL = 'http://52.91.227.125:6080/arcgis/rest/services'
-                const statesService = agsURL + 'us_states_service/MapServer/0';
-			
+                const statesService = agsURL + '/us_states_service/MapServer';
+				const demographicService = agsURL + '/demographicsService/FeatureServer'
+				
 				function init(){     
-			   
+			  
 					map = new Map("map", {
 						basemap:"topo",
 						center: [-97.83298, 36.2225],
@@ -138,8 +145,39 @@
 						"id": statesID, 
 						"opacity": .9,
 					});
-					map.addLayer(statesServiceLyr);
+
+				
+                    var demographicsId = 'demo-editable'
+                    demographicLayer = new FeatureLayer(demographicService , {
+                        "opacity": 0.9,
+                        id: demographicsId,
+                        mode: FeatureLayer.MODE_SNAPSHOT,
+                        outFields: ["*"],
+                        // infoTemplate: new InfoTemplate("")
+                    });
+
+					map.addLayers([ statesServiceLyr,demographicLayer]); 
 				}	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 			
 				init();
 			});
@@ -151,7 +189,11 @@
           <div data-dojo-type="dijit/layout/ContentPane" id="header" data-dojo-props="region:'top'">
                 Where are you from? 
           </div>
-          <div data-dojo-type="dijit/layout/ContentPane" id="map" data-dojo-props="region:'center'"></div>
+		  <div data-dojo-type="dijit/layout/ContentPane" id="map" data-dojo-props="region:'center'">
+			<div id="tp2" data-dojo-type="dijit/TitlePane" data-dojo-props="title: 'I\'m a TitlePane Too'">
+				Click arrow to close me.
+			</div>	
+		  </div>
           <div id="bot" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'bottom', splitter:true" style="height:20%">
           <div id="myTableNode"></div>
         </div>
