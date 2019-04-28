@@ -1,4 +1,4 @@
-
+import artistapi as Artist
 import xml.etree.ElementTree as ET
 import os
 import sys
@@ -6,8 +6,8 @@ import datetime
 import csv  
 from datetime import date
 
-nprRssFeed = os.path.normpath("C:/Users/tmoran/desktop/npr-acts.xml")
-output_folder = r'C:\Users\tmoran\Desktop\test'
+nprRssFeed = os.path.normpath("C:/Users/tmoran/Desktop/msga580/final_project/data/npr-acts.xml")
+output_folder = r'C:\Users\tmoran\Desktop'
 output_csv = 'npr_artists'
 
 def todays_date():
@@ -31,6 +31,7 @@ datetime_string = getDateTime()
 csv_fields = [ 
     'title',
     "description",
+    "location",
     "pubDate", 
     "guid",
     "imgLink", 
@@ -42,6 +43,7 @@ csvfile = open(csv_filename, 'wb')
 npr_csv = csv.DictWriter(csvfile, fieldnames = csv_fields) #Instantiates CSV DictWriter Object
 npr_csv.writeheader() #Writes header per 'csv_fields' list
 
+
 for currentAct in root.findall('item'):
     try: 
         currentNPRAct = {}
@@ -50,6 +52,8 @@ for currentAct in root.findall('item'):
             if item.tag == "title":
                 act = str(item.text.encode('utf-8').strip())
                 currentNPRAct['title'] = act
+                artistLocation = Artist.getArtistLocation(act)
+                currentNPRAct['location'] = artistLocation
             if item.tag == "description": 
                 description = str(item.text.encode('utf-8').strip())
                 currentNPRAct['description'] = description
@@ -73,4 +77,3 @@ for currentAct in root.findall('item'):
     except Exception as e: 
         print act
         print e
-

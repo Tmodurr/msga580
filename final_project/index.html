@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>NPR Ti</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.27/esri/css/esri.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.27/dijit/themes/claro/claro.css">
+        <script src="https://js.arcgis.com/3.27"></script>  
+        <style>
+
+#title{
+    color:white;
+}
+
+div {
+    position:relative;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+.tabOptions{
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+
+img {
+    position:absolute;
+    top:0;
+    bottom:0;
+    margin:auto;
+}
+.image {
+    min-height:50px;
+    display: block;
+}
+
+#title-wrapper{
+    position: relative;
+    vertical-align: middle;
+    border-bottom: thick double #EE3A23;
+}
+#logo{
+    float: left;
+}
+
+#logo-description{
+    vertical-align: middle;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    padding-left: 115px;
+}
+
+img {
+    vertical-align: middle;
+    max-height: 45px;
+    max-width: 160px;
+}
+       
+html, body, .container, #map {
+    height:100%;
+    width:100%;
+    margin:0;
+    padding:0;
+    margin:0;
+    font-family: "Open Sans";
+            }
+#map {
+    padding:0;
+}
+#table-of-contents{
+    width:25%;
+}
+#logo {
+    height: 50px;
+    float:left;
+}
+
+.esriLayer{
+background-color: #fff;
+}
+.esriLayerList .esriList{
+    border-top:none;
+}
+.esriLayerList .esriTitle {
+background-color: #fff;
+border-bottom:none;
+}
+.esriLayerList .esriList ul{
+background-color: #fff;
+}
+.pane-container{
+    width:100%;
+    height:50%;
+}
+.pane-header{
+    height:6%;
+    width:100%;
+    background-color: rgb(105, 22, 105);    
+    border-bottom: 1px solid #444;        
+}
+.pane-header-text{
+    padding-left: 5px;
+    color: white;
+    font-weight: bold;
+}
+
+
+</style>
+    </head>
+
+
+
+    
+    <script>
+       
+        require([   
+                "dojo/parser",
+                "dojo/ready",
+                "dojo/on",
+                "dojo/dom-construct", 
+                "dojo/dom",
+                "dijit/registry", 
+                "esri/map",
+                "esri/layers/ArcGISDynamicMapServiceLayer",
+                "esri/layers/FeatureLayer",
+                "esri/urlUtils",
+                "esri/arcgis/utils",
+                "esri/dijit/LayerList",
+                "esri/InfoTemplate",
+                "esri/renderers/smartMapping",
+                "esri/dijit/OverviewMap",
+                "esri/dijit/Legend",
+                "dijit/form/Select",
+                "dijit/_WidgetBase", //start undeclared
+                "dijit/layout/BorderContainer",
+                "dijit/layout/ContentPane",
+                "dijit/layout/TabContainer",
+                "dojo/domReady!"
+            ],
+            function(
+                parser,
+                ready,
+                on,
+                domConstruct,
+                dom,
+                registry,
+                Map,
+                DynamicMapService,
+                FeatureLayer,
+                urlUtils,
+                arcgisUtils,
+                LayerList,
+                InfoTemplate,
+                smartMapping,
+                OverviewMap,
+                Legend,
+                Select
+            ) {
+                 
+                var map,
+                    OverviewMap,
+                    mapLayers,
+                    nprArtistLayerId, 
+                    congressDMS;
+
+
+                parser.parse();
+
+                const agsURL = 'http://54.147.1.38:6080/arcgis/rest/services';
+                const nprSitesService = agsURL + '/npr_map_sites/MapServer';
+
+                function createOverviewmap(map){
+			    	  overviewMap = new OverviewMap({
+			            map: map,
+			            visible: true
+			          });
+			          overviewMap.startup();
+				}
+
+				function init(){     
+			   
+					map = new Map("map", {
+						basemap:"topo-vector",
+						center: [-100.0850508, 41.647463],
+						zoom: 3
+                	});
+                    createOverviewmap(map);
+
+                    // var nprArtists = "npr-artists";
+                    // nprArtistsLayer  = new DynamicMapService(nprSitesService, {
+                    //     "id": nprArtists, 
+                    //     "opacity": .9,
+                    // });
+
+					// var demographicsId = 'npr-artists'
+                    // demographicLayer = new FeatureLayer(demographicService , {
+                    //     "opacity": 0.9,
+                    //     id: demographicsId,
+                    //     mode: FeatureLayer.MODE_SNAPSHOT,
+                    //     outFields: ["*"],
+                    //     // infoTemplate: new InfoTemplate("")
+                    // });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    map.addLayer(nprArtistsLayer);
+                
+                }
+
+
+				init();
+            });
+
+    </script>
+
+    <body class="claro">
+        <div class="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline',gutters:false">
+            <div id="title-wrapper" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
+                <img class='image' id="logo" src='https://media.npr.org/assets/img/2013/06/19/color-logo-in-square-01_wide-9761a9419cd1b3478cbe493a7b83f9908f989d8e.jpg'>  
+                <div class='title-item' id="logo-description"> <h1>NPR Tiny Desk Acts</h1></div>
+            </div>
+            <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
+                <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">
+                    <div class="tabOptions" id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Tiny Desk Artists">Explore Previous Tiny Desks</div>
+                    <div class="tabOptions"  id="mapLegend" data-dojo-type="dijit/layout/ContentPane" title="Search By">
+                        <div id="legend"></div>
+                    </div>			
+              </div>        
+            </div>
+            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
+        </div>
+    </body>
+
+</html>

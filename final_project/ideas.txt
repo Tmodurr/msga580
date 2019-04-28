@@ -1,0 +1,45 @@
+#use this to attribute csv with location in name and x,y and group type
+  #use this to do related acts (on demand api call)
+    # get top 5 candidates, create object with band name, type, location
+    # get location and bind to object, those with no location drop
+    # add graphics to new layer
+    # zoom to extent of these 
+
+
+issues with certain acts not processing in desktop py scripts 
+issues with unicode
+
+i focused on getting a comphrehensive dataset, this solution is meant to be scalable for new acts that will abide by 
+
+176/301 did not get location for band start date
+didn't take into consideration bands maybe be two major members how really have solo careers
+
+born vs origin vs where they identify with. 
+This paper/data source does not seek to prove this is their origin, rather how this can be mapped. Location could even be a one to many relationships
+with artists. Visualizing tour information as they move throughout time.
+
+names of artists were not necessarly just band/artist info. THis required manual parsing (Hanson Holiday Tiny Desk Concert)
+
+
+The bands visit was a play, how to locate.
+The Band's Visit
+
+
+multicultural band
+
+https://en.wikipedia.org/wiki/Jenny_and_the_Mexicats
+
+
+Frédéric Yonnet With Special Guest Dave Chappelle
+Frederic Yonnet With Special Guest Dave Chappelle
+
+
+
+
+heatmap renderer
+https://developers.arcgis.com/javascript/3/sandbox/sandbox.html?sample=renderer_heatmap
+
+
+For visiting groups, From The Top, washington dc was given as default
+
+https://stackoverflow.com/questions/7273338/how-to-vertically-align-an-image-inside-a-div
