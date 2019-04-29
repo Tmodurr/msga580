@@ -14,7 +14,10 @@
 #title{
     color:white;
 }
-
+#artistChoices{
+    height: 25px;
+    padding-top: 10px;
+}
 div {
     position:relative;
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
@@ -36,6 +39,20 @@ div {
     display: block;
 }
 
+#artist-popup{
+    position: fixed;
+    bottom: 0;
+    z-index:2147483638;
+}
+
+#artist-selection{
+    padding-left: 10px;
+}
+#artist-Choices{
+    padding-left: 10px;
+}
+
+
 img {
     vertical-align: middle;
     max-height: 120px;
@@ -44,19 +61,6 @@ img {
 #logo{
     float: left;
 }
-
-/* #logo {
-    height: 50px;
-    float:left;
-} */
-
-
-
-
-
-
-
-
 
 #title-wrapper{
     position: relative;
@@ -225,6 +229,8 @@ padding:10px 20px; width:100%; text-align:center;}
                 "esri/dijit/OverviewMap",
                 "esri/dijit/Legend",
                 "dijit/form/Select",
+                "dojo/store/Memory",
+                 "dijit/form/FilteringSelect",
                 "dijit/_WidgetBase", //start undeclared
                 "dijit/layout/BorderContainer",
                 "dijit/layout/ContentPane",
@@ -253,42 +259,39 @@ padding:10px 20px; width:100%; text-align:center;}
                 QueryTask, 
                 OverviewMap,
                 Legend,
-                Select
+                Select,
+                Memory,
+                FilteringSelect
             ) {
                  
                 var map,
                     OverviewMap,
                     mapLayers,
                     nprArtistLayerId, 
-                    congressDMS,
-                    artistLookupObject;
+                    artistOptions,
+                    artistLookupObject,
+                    artistOptionsWidget;
 
                 parser.parse();
+
 
                 const agsURL = 'http://54.147.1.38:6080/arcgis/rest/services';
                 const nprSitesService = agsURL + '/nprTinyDesk/FeatureServer/0';
                 const nprMapService = 'http://54.147.1.38:6080/arcgis/rest/services/nprTinyDesk/MapServer'
                 artistLookupObject = {};
+                
                 var modal = document.getElementById('myModal');
                 var btn = document.getElementById("myBtn");
-                                        // Get the <span> element that closes the modal
                 var span = document.getElementsByClassName("close")[0];
-                function createOverviewmap(map){
-			    	  overviewMap = new OverviewMap({
-			            map: map,
-			            visible: true
-			          });
-			          overviewMap.startup();
-				}
-
+               
 				function init(){     
+                    
                     modal.style.display = "block"
 					map = new Map("map", {
 						basemap:"topo-vector",
 						center: [-100.0850508, 41.647463],
 						zoom: 3
-                	});
-                    createOverviewmap(map);
+                	});   
 
                     // var nprArtists = "npr-artists";
                     // nprArtistsLayer  = new DynamicMapService(nprSitesService, {
@@ -304,7 +307,14 @@ padding:10px 20px; width:100%; text-align:center;}
                         outFields: ["*"],
                         // infoTemplate: new InfoTemplate("")
                     });
-                    map.addLayer(nprArtistsLayer);
+
+                    function createOverviewmap(map){
+                        overviewMap = new OverviewMap({
+                        map: map,
+                        visible: true
+                        });
+                        overviewMap.startup();
+				    }
 
                     function fetchArtistInfo(nprSitesService){
                         //Responsible for querying feature service and returning guid, name, screenshot img
@@ -318,70 +328,54 @@ padding:10px 20px; width:100%; text-align:center;}
                         console.log("Executed");
                     }
                     
-
-                    function updateQueryStringParameter(uri, key, value) {
-                        // https://stackoverflow.com/questions/5999118/how-can-i-add-or-update-a-query-string-parameter
-                        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
-                        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
-                        if (uri.match(re)) {
-                            return uri.replace(re, '$1' + key + "=" + value + '$2');
-                        }
-                        else {
-                            return uri + separator + key + "=" + value;
-                        }
-                    }
-
-
-                    function createTOCItem(title, description, guid, imgLink, download_link){
-                        //Responsible for creating the actual dom elements in the TOC/Grid
-                        var parentDiv = document.createElement("div");
-                            parentDiv.classList.add("artist-toc"); //used to be gallery
-                            
-                            var childLink = document.createElement("a");
-                                childLink.setAttribute('target', '_blank');
-                                childLink.setAttribute('href', download_link);
-                           
-                           
-                            imgLink = updateQueryStringParameter(imgLink, 's', 100);
-                            childThumbnail = document.createElement('img')
-                                childThumbnail.setAttribute('src', imgLink);
-                                childThumbnail.setAttribute('alt', description);
-                                childThumbnail.setAttribute('width', 100);
-                                childThumbnail.setAttribute('height', 100);
-                            childCaption = document.createElement('p');
-                            parentDiv.classList.add("absolute-text"); //https://www.quora.com/How-do-I-write-text-over-image-in-HTML
-                            let caption = document.createTextNode("Hi there and greetings!"); 
-                            childCaption.append(caption);
-                            childLink.appendChild(childThumbnail);
-                            parentDiv.appendChild(childLink);
-                            var childDiv = document.createElement("div"); 
-                                childDiv.classList.add("desc");
-                                childDiv.innerHTML = name;
-
-                            parentDiv.appendChild(childDiv);
-                            document.getElementById("artist-toc-items").appendChild(parentDiv); 
-                    }
-
-
-
-
-
-
-
-
                     function createArtistTOC(artistInfoResponse){
                         //Responsible for parsing response from feature service endpoint and rendering TOC items
                         
+                        function __getValues__(response) {
+                            var features = response.features;
+                            var values = features.map(function (feature) {
+                                return feature.attributes.SUB_REGION;
+                            });
+                            return values;
+                        }
+
                         let artistRecords = artistInfoResponse.features;
-
-
-
+                        let artistOptionsArray = []
                         for (i = 0; i < artistRecords.length; i++) { 
-                            artistLookupObject[artistRecords[i].attributes.title] = artistRecords[i].attributes;
-                       
-                       
+                            let actName = artistRecords[i].attributes.title;
+                            let actGUID = artistRecords[i].attributes.guid_;
+                            artistLookupObject[actName] = artistRecords[i].attributes;
+                            let item = {label:actName, value: actGUID};
+                            artistOptionsArray.push(item)
                         }
                         artistLookupReference = artistLookupObject;
+
+                        // artistOptionsArray = __getValues__(artistInfoResponse) // old array getter
+
+                        artistOptionsArray.sort(function(a, b) {
+                            var textA = a.label.toUpperCase();
+                            var textB = b.label.toUpperCase();
+                            return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+                        });
+
+                        let artistOptionsStore = new Memory({
+                            data: artistOptionsArray
+                        });
+
+                        artistOptions = new FilteringSelect({
+                            name: "artist-Selection",
+                            id: "artistSelection",
+                            value: "Dan Auerbach",
+                            store: artistOptionsStore,
+                            searchAttr: "label"
+                        });
+                        artistOptions.placeAt("artist-Choices");
+                        
+                        artistOptions.on('change', function(evt){
+                            console.log(evt);
+                        });
+                        artistOptions.startup(); 
+
 
                         for (var key in artistLookupReference) {
                             let artist = key; 
@@ -404,15 +398,56 @@ padding:10px 20px; width:100%; text-align:center;}
 
 
                     }
+                   
+                    function createTOCItem(title, description, guid, imgLink, download_link){
+                        
+                        function __updateQueryStringParameter__(uri, key, value) {
+                            // https://stackoverflow.com/questions/5999118/how-can-i-add-or-update-a-query-string-parameter
+                            var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+                            var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+                            if (uri.match(re)) {
+                                return uri.replace(re, '$1' + key + "=" + value + '$2');
+                            }
+                            else {
+                                return uri + separator + key + "=" + value;
+                            }
+                        }
 
+                        //Responsible for creating the actual dom elements in the TOC/Grid
+                        var parentDiv = document.createElement("div");
+                            parentDiv.classList.add("artist-toc"); //used to be gallery
+                            
+                            var childLink = document.createElement("div"); //"a"
+   
+                           
+                            imgLink = __updateQueryStringParameter__(imgLink, 's', 100);
+                            childThumbnail = document.createElement('img')
+                                childThumbnail.setAttribute('src', imgLink);
+                                childThumbnail.setAttribute('alt', description);
+                                childThumbnail.setAttribute('title', description);
+                                childThumbnail.setAttribute('name', title);
+                                childThumbnail.setAttribute('width', 100);
+                                childThumbnail.setAttribute('height', 100);
+                            
+                            childThumbnail.onmouseover= function(){
+                                let artistName = this.name;
 
+                            }
 
+                            childLink.appendChild(childThumbnail);
+                            parentDiv.appendChild(childLink);
+                            var childDiv = document.createElement("div"); 
+                                childDiv.classList.add("desc");
+                                childDiv.innerHTML = name;
 
+                            parentDiv.appendChild(childDiv);
+                            document.getElementById("artist-toc-items").appendChild(parentDiv); 
+                    }
+     
+                    createOverviewmap(map);
+
+                    map.addLayer(nprArtistsLayer);
                     fetchArtistInfo(nprSitesService);
-
-                    
-
-                    
 
                     // When the user clicks on <span> (x), close the modal
                     span.onclick = function() {
@@ -425,44 +460,13 @@ padding:10px 20px; width:100%; text-align:center;}
                             modal.style.display = "none";
                         }
                     }
-
-                    function test(response){
-                        console.log('called')
-
-                    }
-
-
-                    function getValues(response) {
-                        var features = response.features;
-                        var values = features.map(function (feature) {
-                            return feature.attributes.SUB_REGION;
-                        });
-                        return values;
-                    }
-
-
-
-
-
-
-
-
-
-
-
                 
                 }
 
-
                 init();
-                console.log(artistLookupObject);
-            
 
-   
-
-
-
-
+                
+           
             });
 
     </script>
@@ -487,16 +491,25 @@ padding:10px 20px; width:100%; text-align:center;}
                 <div class='title-item' id="logo-description"> <h1>NPR Tiny Desk Acts</h1></div>
             </div>
             <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
-                <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">
+                <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">            
                     <div class="tabOptions" id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Tiny Desk Artists">
-                        <div id="artist-toc-items"></div>   
+
+                        <div id="artist-Choices" data-dojo-type="dijit/layout/ContentPane" title="Map Options">Please select an Artist</div>
+                        <div id="artist-selection" data-dojo-type="dijit/layout/ContentPane" title="Map Options">
+                            <span>Current Selected Artist </span>
+                        </div>
+                        
+                        <div id="artist-toc-items" data-dojo-type="dijit/layout/ContentPane"></div>   
                     </div>
                     <div class="tabOptions"  id="mapLegend" data-dojo-type="dijit/layout/ContentPane" title="Search By">
                         <div id="legend"></div>
                     </div>			
               </div>        
             </div>
-            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
+            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'">
+               
+            </div>
+           
         </div>
     </body>
 
