@@ -23,6 +23,17 @@ div {
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
 
+#popup{
+    height: 40px;
+    margin: 30px;
+    background-color: white;
+    opacity: 0.7;
+    position: fixed;
+    bottom: 25px;
+    left: 650px;
+    text-align: center;
+}
+
 .tabOptions{
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
@@ -52,7 +63,6 @@ div {
     padding-left: 10px;
 }
 
-
 img {
     vertical-align: middle;
     max-height: 120px;
@@ -60,6 +70,13 @@ img {
 }
 #logo{
     float: left;
+}
+
+.off{
+    display: none;
+}
+.on{
+    display: block
 }
 
 #title-wrapper{
@@ -88,6 +105,11 @@ html, body, .container, #map {
 #table-of-contents{
     width:32%;
 }
+
+.container{
+    position: relative;
+}
+#over_map { position: absolute; top: 10px; left: 320px; z-index: 99; }
 
 .esriLayer{
 background-color: #fff;
@@ -230,7 +252,11 @@ padding:10px 20px; width:100%; text-align:center;}
                 "esri/dijit/Legend",
                 "dijit/form/Select",
                 "dojo/store/Memory",
-                 "dijit/form/FilteringSelect",
+                "dijit/form/FilteringSelect",
+                "esri/geometry/Point",
+                "esri/SpatialReference",
+                "esri/renderers/HeatmapRenderer",
+                "dijit/form/CheckBox",
                 "dijit/_WidgetBase", //start undeclared
                 "dijit/layout/BorderContainer",
                 "dijit/layout/ContentPane",
@@ -261,7 +287,11 @@ padding:10px 20px; width:100%; text-align:center;}
                 Legend,
                 Select,
                 Memory,
-                FilteringSelect
+                FilteringSelect,
+                Point,
+                SpatialReference,
+                HeatmapRenderer,
+                CheckBox
             ) {
                  
                 var map,
@@ -270,15 +300,20 @@ padding:10px 20px; width:100%; text-align:center;}
                     nprArtistLayerId, 
                     artistOptions,
                     artistLookupObject,
+                    artistGeometryObject, 
                     artistOptionsWidget;
 
                 parser.parse();
 
+                function toggleClustering(){
+                    console.log(context);
+                }
 
                 const agsURL = 'http://54.147.1.38:6080/arcgis/rest/services';
                 const nprSitesService = agsURL + '/nprTinyDesk/FeatureServer/0';
                 const nprMapService = 'http://54.147.1.38:6080/arcgis/rest/services/nprTinyDesk/MapServer'
                 artistLookupObject = {};
+                artistGeometryObject = {};
                 
                 var modal = document.getElementById('myModal');
                 var btn = document.getElementById("myBtn");
@@ -300,13 +335,40 @@ padding:10px 20px; width:100%; text-align:center;}
                     // });
 
 					var nprArtists = 'npr-artists'
+
+                    var nprArtistInfoTemplate = new InfoTemplate("NPR Act", "<strong>Artist/Band Name:</strong> ${title} <br> <strong>Location:</strong> ${location} <br> <strong>Description:</strong> ${description} <br> <strong>Session Release Date:</strong> ${pubDate} <br> <strong>Direct Download Link:</strong> <a href=${actURL}>Direct DL</a>")
+
+
+
+                    // var heatmapFeatureLayerOptions = {
+                    //     mode: FeatureLayer.MODE_SNAPSHOT,
+                    //     infoTemplate: nprArtistInfoTemplate,
+                    //     outFields: [
+                    //         "title",
+                    //         "location",
+                    //         "description",
+                    //         "pubDate",
+                    //         "actURL",
+                    //         "guid_"
+                    //     ]
+                    //     };
+                    //     var heatmapFeatureLayer = new FeatureLayer(nprSitesService, heatmapFeatureLayerOptions);
+                    //     var heatmapRenderer = new HeatmapRenderer();
+                    //     heatmapFeatureLayer.setRenderer(heatmapRenderer);
+                    //     map.addLayer(heatmapFeatureLayer);
+      
                     nprArtistsLayer = new FeatureLayer(nprSitesService , {
                         "opacity": 0.9,
                         id: nprArtists,
                         mode: FeatureLayer.MODE_SNAPSHOT,
+                        featureReduction: {
+                            type: "cluster"
+                        },
                         outFields: ["*"],
-                        // infoTemplate: new InfoTemplate("")
-                    });
+                        infoTemplate: nprArtistInfoTemplate
+                    }); 
+                    nprArtistsLayer.disableFeatureReduction()
+                    map.addLayer(nprArtistsLayer);
 
                     function createOverviewmap(map){
                         overviewMap = new OverviewMap({
@@ -321,7 +383,7 @@ padding:10px 20px; width:100%; text-align:center;}
                         // could have used this, https://developers.arcgis.com/javascript/latest/api-reference/esri-tasks-support-Query.html#returnDistinctValues
                         var queryTask = new QueryTask(nprSitesService);
                         var query = new esriQuery();
-                        query.returnGeometry = false;
+                        query.returnGeometry = true;
                         query.outFields = ["title","description", "pubDate", "guid_", "imgLink", "actURL", "NEAR_DIST"];
                         query.where = "1=1"
                         queryTask.execute(query,createArtistTOC); 
@@ -345,6 +407,7 @@ padding:10px 20px; width:100%; text-align:center;}
                             let actName = artistRecords[i].attributes.title;
                             let actGUID = artistRecords[i].attributes.guid_;
                             artistLookupObject[actName] = artistRecords[i].attributes;
+                            artistGeometryObject[actGUID] = {lat: artistInfoResponse.features[i].geometry.y, lng: artistInfoResponse.features[i].geometry.x }
                             let item = {label:actName, value: actGUID};
                             artistOptionsArray.push(item)
                         }
@@ -371,9 +434,9 @@ padding:10px 20px; width:100%; text-align:center;}
                         });
                         artistOptions.placeAt("artist-Choices");
                         
-                        artistOptions.on('change', function(evt){
-                            console.log(evt);
-                        });
+                        // artistOptions.on('change', function(evt){
+                        //     console.log(evt);
+                        // });
                         artistOptions.startup(); 
 
 
@@ -383,7 +446,7 @@ padding:10px 20px; width:100%; text-align:center;}
                             let title = attributes.title;
                             let description = attributes.description;
                             let pubDate = attributes.pubDate;
-                            let guid = attributes._guid;
+                            let guid = attributes.guid_;
                             let imgLink = attributes.imgLink;
                             let dlLink = attributes.actURL;
                             if (attributes.NEAR_DIST == 0){ //if vertex is in same place, set property to flag as true. 
@@ -398,7 +461,7 @@ padding:10px 20px; width:100%; text-align:center;}
 
 
                     }
-                   
+                             
                     function createTOCItem(title, description, guid, imgLink, download_link){
                         
                         function __updateQueryStringParameter__(uri, key, value) {
@@ -418,21 +481,32 @@ padding:10px 20px; width:100%; text-align:center;}
                             parentDiv.classList.add("artist-toc"); //used to be gallery
                             
                             var childLink = document.createElement("div"); //"a"
-   
-                           
+
                             imgLink = __updateQueryStringParameter__(imgLink, 's', 100);
                             childThumbnail = document.createElement('img')
                                 childThumbnail.setAttribute('src', imgLink);
                                 childThumbnail.setAttribute('alt', description);
                                 childThumbnail.setAttribute('title', description);
                                 childThumbnail.setAttribute('name', title);
+                                childThumbnail.setAttribute('guid', guid);
                                 childThumbnail.setAttribute('width', 100);
                                 childThumbnail.setAttribute('height', 100);
                             
                             childThumbnail.onmouseover= function(){
                                 let artistName = this.name;
-
+                                let popup = document.getElementById("popup");
+                                popup.style.display = "block"; 
+                                popup.innerHTML = artistName;
                             }
+                            childThumbnail.onmouseout= function(){
+                                let popup = document.getElementById("popup");
+                                popup.style.display = "none";
+                            }
+
+                            childThumbnail.onclick = function(){
+                                zoomToArtist(this);
+                            }    
+
 
                             childLink.appendChild(childThumbnail);
                             parentDiv.appendChild(childLink);
@@ -443,30 +517,70 @@ padding:10px 20px; width:100%; text-align:center;}
                             parentDiv.appendChild(childDiv);
                             document.getElementById("artist-toc-items").appendChild(parentDiv); 
                     }
-     
+                                        
+                    var checkBox = new CheckBox({
+                        name: "toggle-clustering",
+                        value: "enabled",
+                        checked: false,
+                        onChange: function(truthy){ 
+                            if(truthy){ //if feature cluster is enabled
+                                if(!nprArtistsLayer.isFeatureReductionActive()){
+                                    nprArtistsLayer.enableFeatureReduction()
+                                }
+                            } else{ // turns off clustering
+                                if (nprArtistsLayer.isFeatureReductionActive()){
+                                    nprArtistsLayer.disableFeatureReduction()
+                                }   
+                            }
+                        }
+                    }, "toggle-clustering").startup();
+
+
+
+
+
+
+
                     createOverviewmap(map);
 
-                    map.addLayer(nprArtistsLayer);
+               
                     fetchArtistInfo(nprSitesService);
-
-                    // When the user clicks on <span> (x), close the modal
-                    span.onclick = function() {
-                        modal.style.display = "none";
-                    }
-
-                    // When the user clicks anywhere outside of the modal, close it
-                    window.onclick = function(event) {
-                        if (event.target == modal) {
-                            modal.style.display = "none";
-                        }
-                    }
-                
                 }
 
                 init();
 
+                span.onclick = function() {
+                    modal.style.display = "none";
+                    // domConstruct.destroy = modal;
+                   
+                }
+
+                // When the user clicks anywhere outside of the modal, close it
+                window.onclick = function(event) {
+                    if (event.target == modal) {
+                        // modal.style.display = "none";
+                        domConstruct.destroy = modal;
+                    }
+                }
+
+                function findArtistLocation(guid){
+                  
+                }
+
+                function zoomToArtist(context){
+                    let artistGUID = context.attributes[4].nodeValue;
+                    console.log(context.attributes[0].nodeValue)
+                    console.log(artistGUID)
+                    let geometry = artistGeometryObject[artistGUID];
+                    let lng = geometry.lng
+                    let lat = geometry.lat
+                    var location = new Point([lng,lat],new SpatialReference({ wkid:4326 }));
+                    map.centerAndZoom(location, 10);
+                    console.log('zoooooooomin');
+                }
                 
-           
+               
+
             });
 
     </script>
@@ -493,23 +607,27 @@ padding:10px 20px; width:100%; text-align:center;}
             <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
                 <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">            
                     <div class="tabOptions" id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Tiny Desk Artists">
-
-                        <div id="artist-Choices" data-dojo-type="dijit/layout/ContentPane" title="Map Options">Please select an Artist</div>
-                        <div id="artist-selection" data-dojo-type="dijit/layout/ContentPane" title="Map Options">
-                            <span>Current Selected Artist </span>
-                        </div>
+                        <div id="artist-selection" data-dojo-type="dijit/layout/ContentPane" title="Map Options"></div>
                         
                         <div id="artist-toc-items" data-dojo-type="dijit/layout/ContentPane"></div>   
                     </div>
                     <div class="tabOptions"  id="mapLegend" data-dojo-type="dijit/layout/ContentPane" title="Search By">
-                        <div id="legend"></div>
+                        <div id="artist-Choices" data-dojo-type="dijit/layout/ContentPane" title="Map Options">Please select an Artist</div>
+                        <div id="toggle-clustering-container">
+                            <!-- <input type='checkbox' class='boolean-toggle' id='toggle-clustering' onclick="togglevalue=0 />  -->
+                            <input id="toggle-clustering" /> <label for="toggle-clustering">Enable Clustering</label>
+                        </div> 
                     </div>			
               </div>        
             </div>
-            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'">
-               
+            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'">        
+            </div>        
+            <div id="over_map">
+                <div id="popup-wrapper">
+                    <div id="popup" style="display:none"></div>
+                </div>
             </div>
-           
+                 
         </div>
     </body>
 
