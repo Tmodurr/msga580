@@ -24,37 +24,50 @@ div {
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
 
-
-img {
+/* ARTIST TOC ITEMS */
+/* img {
     position:absolute;
     top:0;
     bottom:0;
     margin:auto;
-}
+} */
 .image {
     min-height:50px;
     display: block;
 }
+
+img {
+    vertical-align: middle;
+    max-height: 120px;
+    max-width: 120px;
+}
+#logo{
+    float: left;
+}
+
+/* #logo {
+    height: 50px;
+    float:left;
+} */
+
+
+
+
+
+
+
+
 
 #title-wrapper{
     position: relative;
     vertical-align: middle;
     border-bottom: thick double #EE3A23;
 }
-#logo{
-    float: left;
-}
 
 #logo-description{
     vertical-align: middle;
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     padding-left: 115px;
-}
-
-img {
-    vertical-align: middle;
-    max-height: 45px;
-    max-width: 160px;
 }
        
 html, body, .container, #map {
@@ -69,11 +82,7 @@ html, body, .container, #map {
     padding:0;
 }
 #table-of-contents{
-    width:25%;
-}
-#logo {
-    height: 50px;
-    float:left;
+    width:32%;
 }
 
 .esriLayer{
@@ -105,6 +114,85 @@ background-color: #fff;
     font-weight: bold;
 }
 
+div.artist-toc {
+    margin: 5px;
+    border: 1px solid #ccc;
+    float: left;
+  }
+  
+  div.artist-toc:hover {
+    border: 1px solid #777;
+  }
+  
+  div.artist-toc img {
+    /* width: 100%; */
+    height: 100%;
+    height: inherit;
+  }
+  
+/* 
+
+.relative{position:relative; width:600px;}
+.absolute-text{position:absolute; bottom:0; font-size:24px; font-family:"vedana"; background:rgba(251,251,251,0.5);
+padding:10px 20px; width:100%; text-align:center;}
+.absolute-text a{font-size:16px; color:#b92b27;}
+
+ */
+
+ /* https://www.w3schools.com/howto/howto_css_modals.asp */
+
+ .modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 100px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+/* The Close Button */
+.close {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 </style>
     </head>
@@ -129,6 +217,11 @@ background-color: #fff;
                 "esri/dijit/LayerList",
                 "esri/InfoTemplate",
                 "esri/renderers/smartMapping",
+                "esri/tasks/FindTask",
+                "esri/tasks/FindParameters",
+                'dojo/query',
+                "esri/tasks/query",
+                'esri/tasks/QueryTask',
                 "esri/dijit/OverviewMap",
                 "esri/dijit/Legend",
                 "dijit/form/Select",
@@ -153,6 +246,11 @@ background-color: #fff;
                 LayerList,
                 InfoTemplate,
                 smartMapping,
+                FindTask,
+                FindParameters,
+                query, 
+                esriQuery,
+                QueryTask, 
                 OverviewMap,
                 Legend,
                 Select
@@ -162,14 +260,19 @@ background-color: #fff;
                     OverviewMap,
                     mapLayers,
                     nprArtistLayerId, 
-                    congressDMS;
-
+                    congressDMS,
+                    artistLookupObject;
 
                 parser.parse();
 
                 const agsURL = 'http://54.147.1.38:6080/arcgis/rest/services';
-                const nprSitesService = agsURL + '/npr_map_sites/MapServer';
-
+                const nprSitesService = agsURL + '/nprTinyDesk/FeatureServer/0';
+                const nprMapService = 'http://54.147.1.38:6080/arcgis/rest/services/nprTinyDesk/MapServer'
+                artistLookupObject = {};
+                var modal = document.getElementById('myModal');
+                var btn = document.getElementById("myBtn");
+                                        // Get the <span> element that closes the modal
+                var span = document.getElementsByClassName("close")[0];
                 function createOverviewmap(map){
 			    	  overviewMap = new OverviewMap({
 			            map: map,
@@ -179,7 +282,7 @@ background-color: #fff;
 				}
 
 				function init(){     
-			   
+                    modal.style.display = "block"
 					map = new Map("map", {
 						basemap:"topo-vector",
 						center: [-100.0850508, 41.647463],
@@ -193,54 +296,164 @@ background-color: #fff;
                     //     "opacity": .9,
                     // });
 
-					// var demographicsId = 'npr-artists'
-                    // demographicLayer = new FeatureLayer(demographicService , {
-                    //     "opacity": 0.9,
-                    //     id: demographicsId,
-                    //     mode: FeatureLayer.MODE_SNAPSHOT,
-                    //     outFields: ["*"],
-                    //     // infoTemplate: new InfoTemplate("")
-                    // });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+					var nprArtists = 'npr-artists'
+                    nprArtistsLayer = new FeatureLayer(nprSitesService , {
+                        "opacity": 0.9,
+                        id: nprArtists,
+                        mode: FeatureLayer.MODE_SNAPSHOT,
+                        outFields: ["*"],
+                        // infoTemplate: new InfoTemplate("")
+                    });
                     map.addLayer(nprArtistsLayer);
+
+                    function fetchArtistInfo(nprSitesService){
+                        //Responsible for querying feature service and returning guid, name, screenshot img
+                     
+                        var queryTask = new QueryTask(nprSitesService);
+                        var query = new esriQuery();
+                        query.returnGeometry = false;
+                        query.outFields = ["title","description", "pubDate", "guid_", "imgLink", "actURL", "NEAR_DIST"];
+                        query.where = "1=1"
+                        queryTask.execute(query,createArtistTOC); 
+                        console.log("Executed");
+                    }
+                    
+
+                    function createTOCItem(title, description, guid, imgLink, download_link){
+                        //Responsible for creating the actual dom elements in the TOC/Grid
+                        var parentDiv = document.createElement("div");
+                            parentDiv.classList.add("artist-toc"); //used to be gallery
+                            
+                            var childLink = document.createElement("a");
+                                childLink.setAttribute('target', '_blank');
+                                childLink.setAttribute('href', download_link);
+                           
+                           
+                           
+                            childThumbnail = document.createElement('img')
+                                childThumbnail.setAttribute('src', imgLink);
+                                childThumbnail.setAttribute('alt', description);
+                                childThumbnail.setAttribute('width', 100);
+                                childThumbnail.setAttribute('height', 100);
+                            childCaption = document.createElement('p');
+                            parentDiv.classList.add("absolute-text"); //https://www.quora.com/How-do-I-write-text-over-image-in-HTML
+                            let caption = document.createTextNode("Hi there and greetings!"); 
+                            childCaption.append(caption);
+                            childLink.appendChild(childThumbnail);
+                            parentDiv.appendChild(childLink);
+                            var childDiv = document.createElement("div"); 
+                                childDiv.classList.add("desc");
+                                childDiv.innerHTML = name;
+
+                            parentDiv.appendChild(childDiv);
+                            document.getElementById("artist-toc-items").appendChild(parentDiv); 
+                    }
+
+
+
+
+
+
+
+
+                    function createArtistTOC(artistInfoResponse){
+                        //Responsible for parsing response from feature service endpoint and rendering TOC items
+                        let artistRecords = artistInfoResponse.features;
+
+
+
+                        for (i = 0; i < artistRecords.length; i++) { 
+                            artistLookupObject[artistRecords[i].attributes.title] = artistRecords[i].attributes;
+                       
+                       
+                        }
+                        artistLookupReference = artistLookupObject;
+
+                        for (var key in artistLookupReference) {
+                            let artist = key; 
+                            let attributes = artistLookupReference[artist];
+                            let title = attributes.title;
+                            let description = attributes.description;
+                            let pubDate = attributes.pubDate;
+                            let guid = attributes._guid;
+                            let imgLink = attributes.imgLink;
+                            let dlLink = attributes.actURL;
+                            if (attributes.NEAR_DIST == 0){ //if vertex is in same place, set property to flag as true. 
+                                attributes.sharedLoc = true;
+                            }
+                            else{
+                                attributes.sharedLoc = true;
+                            }
+                            
+                            createTOCItem(title, description, guid, imgLink,dlLink )
+                        }
+
+
+                    }
+
+
+
+
+                    fetchArtistInfo(nprSitesService);
+
+                    
+
+                    
+
+                    // When the user clicks on <span> (x), close the modal
+                    span.onclick = function() {
+                        modal.style.display = "none";
+                    }
+
+                    // When the user clicks anywhere outside of the modal, close it
+                    window.onclick = function(event) {
+                        if (event.target == modal) {
+                            modal.style.display = "none";
+                        }
+                    }
+
+
+
+
+
+
+
+
+
+
+
+
                 
                 }
 
 
-				init();
+                init();
+                console.log(artistLookupObject);
+            
+
+   
+
+
+
+
             });
 
     </script>
 
     <body class="claro">
+        <div id="myModal" class="modal">
+            <!-- Modal content -->
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <img id='intro-image' src='https://media.npr.org/assets/img/2018/08/06/npr_tdconcerts_podcasttile_video_sq-b6365c34821ed5be5eb8668a7ca1583e3d7ceb51.jpg?f=thumbnail%22'>
+                <p>This Map-Centric Web Application is designed to visualize the NPR Tiny Desk Series. You can......</p>
+                <ol>
+                    <li>View Artists Hometown/Origin</li>
+                    <li>Link to Artists Tiny Desk Sessions</li>
+                    <li>Search for Artists by location</li>
+                </ol>
+            </div>        
+        </div>
         <div class="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline',gutters:false">
             <div id="title-wrapper" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
                 <img class='image' id="logo" src='https://media.npr.org/assets/img/2013/06/19/color-logo-in-square-01_wide-9761a9419cd1b3478cbe493a7b83f9908f989d8e.jpg'>  
@@ -248,7 +461,9 @@ background-color: #fff;
             </div>
             <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
                 <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">
-                    <div class="tabOptions" id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Tiny Desk Artists">Explore Previous Tiny Desks</div>
+                    <div class="tabOptions" id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Tiny Desk Artists">
+                        <div id="artist-toc-items"></div>   
+                    </div>
                     <div class="tabOptions"  id="mapLegend" data-dojo-type="dijit/layout/ContentPane" title="Search By">
                         <div id="legend"></div>
                     </div>			
