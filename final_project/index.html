@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>NPR Ti</title>
+        <title>Mapping NPR Tiny Desk</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://js.arcgis.com/3.27/esri/css/esri.css">
@@ -308,7 +308,7 @@ padding:10px 20px; width:100%; text-align:center;}
 
                     function fetchArtistInfo(nprSitesService){
                         //Responsible for querying feature service and returning guid, name, screenshot img
-                     
+                        // could have used this, https://developers.arcgis.com/javascript/latest/api-reference/esri-tasks-support-Query.html#returnDistinctValues
                         var queryTask = new QueryTask(nprSitesService);
                         var query = new esriQuery();
                         query.returnGeometry = false;
@@ -318,6 +318,19 @@ padding:10px 20px; width:100%; text-align:center;}
                         console.log("Executed");
                     }
                     
+
+                    function updateQueryStringParameter(uri, key, value) {
+                        // https://stackoverflow.com/questions/5999118/how-can-i-add-or-update-a-query-string-parameter
+                        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+                        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+                        if (uri.match(re)) {
+                            return uri.replace(re, '$1' + key + "=" + value + '$2');
+                        }
+                        else {
+                            return uri + separator + key + "=" + value;
+                        }
+                    }
+
 
                     function createTOCItem(title, description, guid, imgLink, download_link){
                         //Responsible for creating the actual dom elements in the TOC/Grid
@@ -329,7 +342,7 @@ padding:10px 20px; width:100%; text-align:center;}
                                 childLink.setAttribute('href', download_link);
                            
                            
-                           
+                            imgLink = updateQueryStringParameter(imgLink, 's', 100);
                             childThumbnail = document.createElement('img')
                                 childThumbnail.setAttribute('src', imgLink);
                                 childThumbnail.setAttribute('alt', description);
@@ -358,6 +371,7 @@ padding:10px 20px; width:100%; text-align:center;}
 
                     function createArtistTOC(artistInfoResponse){
                         //Responsible for parsing response from feature service endpoint and rendering TOC items
+                        
                         let artistRecords = artistInfoResponse.features;
 
 
@@ -412,6 +426,19 @@ padding:10px 20px; width:100%; text-align:center;}
                         }
                     }
 
+                    function test(response){
+                        console.log('called')
+
+                    }
+
+
+                    function getValues(response) {
+                        var features = response.features;
+                        var values = features.map(function (feature) {
+                            return feature.attributes.SUB_REGION;
+                        });
+                        return values;
+                    }
 
 
 
