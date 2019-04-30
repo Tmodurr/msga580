@@ -1,500 +1,815 @@
 <!DOCTYPE html>
-	<head>
-		<meta charset="utf-8">
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
-		<title>Lab 9 - Thomas Moran</title>
-		<meta name="description" content="">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" href="https://js.arcgis.com/3.28/esri/css/esri.css">
-		<link rel="stylesheet" href="https://js.arcgis.com/3.28/dijit/themes/claro/claro.css">
-		<script src="https://js.arcgis.com/3.28/"></script>
-		<style>
-			
-			html, body, .container, #map {
-					height:100%;
-					width:100%;
-					margin:0;
-					padding:0;
-					margin:0;
-					font-family: "Open Sans";
-							}
-			#map {
-				padding:0;
-			}
-			#table-of-contents{
-				width:25%;
-			}
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Mapping NPR Tiny Desk</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.27/esri/css/esri.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.27/dijit/themes/claro/claro.css">
+        <script src="https://js.arcgis.com/3.27"></script>  
+        <style>
 
-			#title-block{
-				color: white;
-				background-color: rgb(8, 8, 99)
-			}
+#title{
+    color:white;
+}
+#artistChoices{
+    height: 25px;
+    padding-top: 10px;
+}
+div {
+    position:relative;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
 
-			#search-title{
-				color: white;
-				background-color: rgb(83, 30, 83);
-				display: block;
-				font-weight: bold;
-			}
+.wrapper{
 
-
-			#buffer-btn{
-
-				display: flex;
-				align-items: center;
-				justify-content: center;
-
-			}
-
-
-			#search-condition-btn-container{
-				padding-top: 5px;
-			}
-
-			#search-results-container{
-				border-style: solid;
-				border-width: 1px;
-				border-color: rgb(82, 81, 81);
-				height: 600px;
-			}
-
-			#geocoding-description{
-				padding-top: 5px;
-			}
-
-			#where-clause-container{
-				padding: 2px;
-				display: block;
-			}
-			.search-option{
-				display: inline-block;
-			}
-
-			#horizontal-slider{
-				padding-top: 10px;
-			}
+    align-items: center;
+    justify-content: center;
+}
 
 
 
-		
-		</style>
-	</head>
+.edit-query-wrapper{
+    padding:10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#toggle-clustering{
+    padding: 10px;
+}
+
+#popup{
+    position: fixed;
+    bottom: 25px;
+    left: 670px;
+    line-height: 20px;
+    text-align: center;
+    background-color: white;
+}
+
+#popup-container{
+    position: fixed;
+    background-color: white;
+    height: 20px;
+    line-height: 20px;
+    width: 150px;
+    margin: 30px;
+    left: 650px;
+    bottom: 25px;
+    opacity: 0.95;
+    border: 1px solid #666;
+ }
+
+.related-links{
+    width: 100px;
+    padding: 25px;
+
+}
+
+/* https://stackoverflow.com/questions/7560832/how-to-center-a-button-within-a-div */
+ #editInArcGIS-wrapper{ 
+     display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 2px dashed #4067B2;
+    padding: 10px
+}
+#editInArcGIS{
+    
+}
+
+.tabOptions{
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+/* ARTIST TOC ITEMS */
+/* img {
+    position:absolute;
+    top:0;
+    bottom:0;
+    margin:auto;
+} */
+.image {
+    min-height:50px;
+    display: block;
+}
+
+#artist-popup{
+    position: fixed;
+    bottom: 0;
+    z-index:2147483638;
+}
+
+#artist-selection{
+    padding-left: 10px;
+}
+#artist-Choices{
+    padding-left: 10px;
+}
+
+img {
+    vertical-align: middle;
+    max-height: 120px;
+    max-width: 120px;
+}
+#logo{
+    float: left;
+}
+
+.off{
+    display: none;
+}
+.on{
+    display: block
+}
+
+#title-wrapper{
+    position: relative;
+    vertical-align: middle;
+    border-bottom: thick double #EE3A23;
+}
+
+#logo-description{
+    vertical-align: middle;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    padding-left: 115px;
+}
+       
+html, body, .container, #map {
+    height:100%;
+    width:100%;
+    margin:0;
+    padding:0;
+    margin:0;
+    font-family: "Open Sans";
+            }
+#map {
+    padding:0;
+}
+#table-of-contents{
+    width:32%;
+}
+
+.container{
+    position: relative;
+}
+#over_map { position: absolute; top: 10px; left: 320px; z-index: 99; padding-top: 15px;}
+
+.esriLayer{
+background-color: #fff;
+}
+.esriLayerList .esriList{
+    border-top:none;
+}
+.esriLayerList .esriTitle {
+background-color: #fff;
+border-bottom:none;
+}
+.esriLayerList .esriList ul{
+background-color: #fff;
+}
+.pane-container{
+    width:100%;
+    height:50%;
+}
+.pane-header{
+    height:6%;
+    width:100%;
+    background-color: rgb(105, 22, 105);    
+    border-bottom: 1px solid #444;        
+}
+.pane-header-text{
+    padding-left: 5px;
+    color: white;
+    font-weight: bold;
+}
+
+div.artist-toc {
+    margin: 5px;
+    border: 1px solid #ccc;
+    float: left;
+  }
+  
+  div.artist-toc:hover {
+    border: 1px solid #777;
+  }
+  
+  div.artist-toc img {
+    /* width: 100%; */
+    height: 100%;
+    height: inherit;
+  }
+  
+/* 
+
+.relative{position:relative; width:600px;}
+.absolute-text{position:absolute; bottom:0; font-size:24px; font-family:"vedana"; background:rgba(251,251,251,0.5);
+padding:10px 20px; width:100%; text-align:center;}
+.absolute-text a{font-size:16px; color:#b92b27;}
+
+ */
+
+ /* https://www.w3schools.com/howto/howto_css_modals.asp */
+
+ .modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 100px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+/* The Close Button */
+.close {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+
+
+#search {
+    display: block;
+    position: absolute;
+    z-index: 888;
+    top: 110px;
+    left: 700px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+</style>
+    </head>
+
+
+
+    
+    <script>
+       
+        require([   
+                "dojo/parser",
+                "dojo/ready",
+                "dojo/on",
+                "dojo/dom-construct", 
+                "dojo/dom",
+                "dijit/registry", 
+                "esri/map",
+                "esri/layers/ArcGISDynamicMapServiceLayer",
+                "esri/layers/FeatureLayer",
+                "esri/urlUtils",
+                "esri/arcgis/utils",
+                "esri/dijit/LayerList",
+                "esri/InfoTemplate",
+                "esri/renderers/smartMapping",
+                "esri/tasks/FindTask",
+                "esri/tasks/FindParameters",
+                'dojo/query',
+                "esri/tasks/query",
+                'esri/tasks/QueryTask',
+                "esri/dijit/OverviewMap",
+                "esri/dijit/Legend",
+                "dijit/form/Select",
+                "dojo/store/Memory",
+                "dijit/form/FilteringSelect",
+                "esri/geometry/Point",
+                "esri/SpatialReference",
+                "esri/renderers/HeatmapRenderer",
+                "dijit/form/CheckBox",
+                "esri/symbols/SimpleMarkerSymbol",
+                "esri/Color",
+                "esri/graphic",
+                "esri/dijit/Search",
+                "esri/dijit/editing/Editor",
+				"esri/dijit/editing/TemplatePicker",
+                "dijit/form/Button",
+                "dijit/_WidgetBase", //start undeclared
+                "dijit/layout/BorderContainer",
+                "dijit/layout/ContentPane",
+                "dijit/layout/TabContainer",
+                "dojo/domReady!"
+            ],
+            function(
+                parser,
+                ready,
+                on,
+                domConstruct,
+                dom,
+                registry,
+                Map,
+                DynamicMapService,
+                FeatureLayer,
+                urlUtils,
+                arcgisUtils,
+                LayerList,
+                InfoTemplate,
+                smartMapping,
+                FindTask,
+                FindParameters,
+                query, 
+                esriQuery,
+                QueryTask, 
+                OverviewMap,
+                Legend,
+                Select,
+                Memory,
+                FilteringSelect,
+                Point,
+                SpatialReference,
+                HeatmapRenderer,
+                CheckBox,
+                SimpleMarkerSymbol,
+                Color,
+                Graphic,
+                Search,
+                Editor,
+                TemplatePicker,
+                Button
+            ) {
+                 
+               
+                parser.parse();
+
+                var map,
+                    OverviewMap,
+                    mapLayers,
+                    nprArtistLayerId, 
+                    artistOptions,
+                    artistLookupObject,
+                    artistGeometryObject, 
+                    highlightLayer,
+                    artistGeomRef,
+                    artistOptionsWidget,
+                    showsLayer;
+
+                const agsURL = 'http://54.147.1.38:6080/arcgis/rest/services';
+                const nprSitesService = agsURL + '/nprTinyDesk/FeatureServer/0';
+                const showsPeopleHaveSeen = agsURL + '/MyMapService2/FeatureServer/0' //server was having crazy issues publishing and finally published with simple service name. 
+                const nprMapService = 'http://54.147.1.38:6080/arcgis/rest/services/nprTinyDesk/MapServer'
+                artistLookupObject = {};
+                artistGeometryObject = {};
+                
+                var modal = document.getElementById('myModal');
+                var btn = document.getElementById("myBtn");
+                var span = document.getElementsByClassName("close")[0];
+                
+                function initEditor(evt) {
 	
-	<script>
+                    var layerInfos = [{featureLayer: showsLayer}];
+                    
+                    var settings = {
+                        map: map,
+                        layerInfos: layerInfos,
+                        toolbarVisible: true
+                    }
+                    
+                    var params = {settings: settings};
+                    editor = new Editor(params, "editorDiv");
+                    editor.startup();
 
-	  
-		require([   
-				"dojo/parser",
-				"dojo/ready",
-				"dojo/on",
-				"dojo/dom-construct", 
-				'dojo/dom-style',
-				'dojo/query',
-				"esri/tasks/query",
-				'esri/tasks/QueryTask',
-				"esri/symbols/SimpleMarkerSymbol",
-				"esri/tasks/ParameterValue",
-				"esri/graphicsUtils",
-				"esri/graphic", 
-				"esri/geometry/Extent",
-				"esri/tasks/LinearUnit",
-				"esri/tasks/FeatureSet",
-				"esri/tasks/locator", 
-				"esri/geometry/Point",
-				"dgrid/Grid",
-				"dgrid/Selection",
-				'dojo/_base/declare',
-				"dojo/dom",
-				"dijit/registry", 
-				"dojo/_base/array",
-				"esri/map",
-				"esri/SpatialReference",
-				"esri/layers/ArcGISDynamicMapServiceLayer",
-				"esri/layers/FeatureLayer",
-				"esri/tasks/Geoprocessor",
-				"esri/urlUtils",
-				"esri/arcgis/utils",
-				"esri/dijit/LayerList",
-				"esri/InfoTemplate",
-				"dojo/_base/Color",
-				"esri/renderers/smartMapping",
-				"esri/dijit/Legend",
-				"dijit/form/Select",
-				"dijit/form/RadioButton",
-				"dijit/form/HorizontalSlider",
-				"dijit/form/HorizontalRule",
-				"dijit/form/HorizontalRuleLabels",
-				"dojo/aspect",
-				"dijit/form/Button",
-				"dijit/_WidgetBase", //start undeclared
-				"dijit/layout/BorderContainer",
-				"dijit/layout/ContentPane",
-				"dijit/layout/TabContainer",
-				"dojo/domReady!"
-			],
-			function(
-				parser,
-				ready,
-				on,
-				domConstruct,
-				domStyle,
-				query, 
-				esriQuery,
-				QueryTask, 
-				SimpleMarkerSymbol,
-				ParameterValue,
-				graphicsUtils,
-				Graphic,
-				Extent, 
-				LinearUnit,
-				FeatureSet,
-				Locator,
-				Point,
-				Grid,
-				Selection,
-				declare,
-				dom,
-				registry,
-				array,
-				Map,
-				SpatialReference,
-				DynamicMapService,
-				FeatureLayer,
-				Geoprocessor,
-				urlUtils,
-				arcgisUtils,
-				LayerList,
-				InfoTemplate,
-				Color,
-				smartMapping,
-				Legend,
-				Select,
-				RadioButton,
-				HorizontalSlider,
-				HorizontalRule,
-				HorizontalRuleLabels,
-				aspect
-			) {
-				parser.parse();      
+                    var templatePicker = new TemplatePicker({
+                        featureLayers: showsLayer,
+                        grouping: true,
+                        rows: "auto",
+                        columns: 1
+                    }, "templateDiv");
+                    templatePicker.startup();
 
-				const agsURL = 'http://35.175.150.188:6080/arcgis/rest/services'
-				const blockGroupService = agsURL + '/Travis_Pop2010/MapServer';
+            }    
 
-				const geocodingServer = 'http://35.175.150.188:6080/arcgis/rest/services/Austin_Streets/GeocodeServer';
-				const locator = new Locator(geocodingServer);
+                function goToArcGIS(){
+                    //Intended to open edit session in new arcmap session
+                    let mapZoom = map.getZoom();
+                    let mapCenter = map.extent.getCenter();
 
-				const populationService = 'http://35.175.150.188:6080/arcgis/rest/services/PopulationModel/GPServer/PopulationModel'
-	
-				var horizontalSlider = registry.byId("horizontal-slider"), 
-					bufferLabel = dom.byId("bufferValue"),
-					bufferSearchBtn = dom.byId("buffer-btn"),
-					geocodingContents = dom.byId("geocoding-contents"),
-					bufferLayer;
+                    let x = mapCenter.getLongitude();
+                    let y = mapCenter.getLatitude();
+                    var arcgisonlineurl= "http://www.arcgis.com/home/webmap/viewer.html?&center="+x +","+ y+"&level="+mapZoom+"&urls="+showsPeopleHaveSeen;
+                    window.open(arcgisonlineurl, '_blank');
+                }
 
+
+                function highlightArtist(newValue){
+				        clearGraphics();
+                        
+                        let artistReference = artistLookupObject;
+                        let geometryLookup = artistGeometryObject;
+                        let artistCurrent = artistReference[newValue];
+                        let id = artistCurrent.guid_;
+                        geometry = geometryLookup[id];
+
+                        var sr = new SpatialReference(4326);
+                        let pt = new Point(geometry.lng, geometry.lat, sr); 
+                        // let pt = new Point(geometry.lng, geometry.lat, map.spatialReference); 
+                        let sms = new SimpleMarkerSymbol().setStyle(
+                            SimpleMarkerSymbol.STYLE_SQUARE).setColor(
+                                new Color([255,0,0,0.5])
+                            )    
+                        
+                        sms.setSize("30");
+
+                        let attr = {"Artist/Act":  artistCurrent.title, "Location": artistCurrent.location, "Description": artistCurrent.description}
+                        var infoTemplate = new InfoTemplate( 
+                            "Highlighted Artist", 
+                            "Artist/Act: ${location}<br /> Description: ${description}"
+                        );
+                        let graphic = new Graphic(pt,sms,attr,infoTemplate);
+                        map.graphics.add(graphic);
+                }
+
+                function createOverviewmap(map){
+                        overviewMap = new OverviewMap({
+                        map: map,
+                        visible: true
+                        });
+                        overviewMap.startup();
+				    }
+
+                function fetchArtistInfo(nprSitesService){
+                    //Responsible for querying feature service and returning guid, name, screenshot img
+                    // could have used this, https://developers.arcgis.com/javascript/latest/api-reference/esri-tasks-support-Query.html#returnDistinctValues
+                    var queryTask = new QueryTask(nprSitesService);
+                    var query = new esriQuery();
+                    query.returnGeometry = true;
+                    query.outFields = ["title","description", "pubDate", "guid_", "imgLink", "actURL", "NEAR_DIST"];
+                    query.where = "1=1"
+                    queryTask.execute(query,createArtistTOC); 
+                    console.log("Executed");
+                }
+                
+                function createArtistTOC(artistInfoResponse){
+                    //Responsible for parsing response from feature service endpoint and rendering TOC items
+                    
+                    function __getValues__(response) {
+                        var features = response.features;
+                        var values = features.map(function (feature) {
+                            return feature.attributes.SUB_REGION;
+                        });
+                        return values;
+                    }
+
+                    let artistRecords = artistInfoResponse.features;
+                    let artistOptionsArray = []
+                    for (i = 0; i < artistRecords.length; i++) { 
+                        let actName = artistRecords[i].attributes.title;
+                        let actGUID = artistRecords[i].attributes.guid_;
+                        artistLookupObject[actName] = artistRecords[i].attributes;
+                        artistGeometryObject[actGUID] = {lat: artistInfoResponse.features[i].geometry.y, lng: artistInfoResponse.features[i].geometry.x }
+                        let item = {id:actName, value: actGUID};
+                        artistOptionsArray.push(item)
+                    }
+                    artistLookupReference = artistLookupObject;
+                    
+
+                    // artistOptionsArray = __getValues__(artistInfoResponse) // old array getter
+
+                    artistOptionsArray.sort(function(a, b) {
+                        var textA = a.id.toUpperCase();
+                        var textB = b.id.toUpperCase();
+                        return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+                    });
+
+                    let artistOptionsStore = new Memory({
+                        data: artistOptionsArray
+                    });
+
+                    artistOptions = new FilteringSelect({
+                        name: "artist-Selection",
+                        id: "artistSelection",
+                        value: "Dan Auerbach",
+                        store: artistOptionsStore, 
+                        searchAttr: "id"     //SUPER ANNOYING! Id was the fix but label would cause this to break, schema specific
+                    });
+                    artistOptions.placeAt("artist-Choices");
+
+                    artistOptions.on('change', function(newValue){
+                        console.log('eyyyyyyyy we supposed to zoom to a specific person');
+                        let actGUID = artistLookupObject[newValue].guid_;
+                        let geometry = artistGeometryObject[actGUID];
+                        let lng = geometry.lng
+                        let lat = geometry.lat
+                        let zoomToSpot = new Point([lng,lat],new SpatialReference({ wkid:4326 }));
+                        map.centerAndZoom(zoomToSpot, 10);
+                    })
+
+                    for (var key in artistLookupReference) {
+                        let artist = key; 
+                        let attributes = artistLookupReference[artist];
+                        let title = attributes.title;
+                        let description = attributes.description;
+                        let pubDate = attributes.pubDate;
+                        let guid = attributes.guid_;
+                        let imgLink = attributes.imgLink;
+                        let dlLink = attributes.actURL;
+                        if (attributes.NEAR_DIST == 0){ //if vertex is in same place, set property to flag as true. 
+                            attributes.sharedLoc = true;
+                        }
+                        else{
+                            attributes.sharedLoc = true;
+                        }
+                        createTOCItem(title, description, guid, imgLink,dlLink )
+                    }
+
+
+                }
+                            
+                function createTOCItem(title, description, guid, imgLink, download_link){
+                    
+                    function __updateQueryStringParameter__(uri, key, value) {
+                        // https://stackoverflow.com/questions/5999118/how-can-i-add-or-update-a-query-string-parameter
+                        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+                        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+                        if (uri.match(re)) {
+                            return uri.replace(re, '$1' + key + "=" + value + '$2');
+                        }
+                        else {
+                            return uri + separator + key + "=" + value;
+                        }
+                    }
+
+                    //Responsible for creating the actual dom elements in the TOC/Grid
+                    var parentDiv = document.createElement("div");
+                        parentDiv.classList.add("artist-toc"); //used to be gallery
+                        
+                        var childLink = document.createElement("div"); //"a"
+
+                        imgLink = __updateQueryStringParameter__(imgLink, 's', 100);
+                        childThumbnail = document.createElement('img')
+                            childThumbnail.setAttribute('src', imgLink);
+                            childThumbnail.setAttribute('alt', description);
+                            childThumbnail.setAttribute('title', description);
+                            childThumbnail.setAttribute('name', title);
+                            childThumbnail.setAttribute('guid', guid);
+                            childThumbnail.setAttribute('width', 100);
+                            childThumbnail.setAttribute('height', 100);
+                        
+                        childThumbnail.onmouseover= function(){
+                            let artistName = this.name;
+                            highlightArtist(artistName);
+                            let popup = document.getElementById("popup");
+                            popup.style.display = "block"; 
+                            popup.innerHTML = artistName;
+
+
+
+                        }
+                        childThumbnail.onmouseout= function(){
+                            let popup = document.getElementById("popup");
+                            popup.style.display = "none";
+                            clearGraphics()
+                        }
+
+                        childThumbnail.onclick = function(){
+                            zoomToArtist(this);
+                        }    
+
+
+                        childLink.appendChild(childThumbnail);
+                        parentDiv.appendChild(childLink);
+                        var childDiv = document.createElement("div"); 
+                            childDiv.classList.add("desc");
+                            childDiv.innerHTML = name;
+
+                        parentDiv.appendChild(childDiv);
+                        document.getElementById("artist-toc-items").appendChild(parentDiv); 
+                }
+                                    
 				function init(){     
-			   
+                    
+                    modal.style.display = "block"
 					map = new Map("map", {
-						basemap:"topo",
-						center: [-97.83298, 30.2225],
-						zoom: 10
-					});    
+						basemap:"topo-vector",
+						center: [-100.0850508, 41.647463],
+						zoom: 3
+                	});   
+                    // map.on("layers-add-result", initEditor); no idea why this won't work
+
+                    var search = new Search({
+                        map: map
+                    }, "search");
+                    search.startup();
+
+					var nprArtists = 'npr-artists'
+
+                    var nprArtistInfoTemplate = new InfoTemplate("NPR Act", "<strong>Artist/Band Name:</strong> ${title} <br> <strong>Location:</strong> ${location} <br> <strong>Description:</strong> ${description} <br> <strong>Session Release Date:</strong> ${pubDate} <br> <strong>Direct Download Link:</strong> <a href=${actURL}>Direct DL</a>")
+
+                    nprArtistsLayer = new FeatureLayer(nprSitesService , {
+                        "opacity": 0.9,
+                        id: nprArtists,
+                        mode: FeatureLayer.MODE_SNAPSHOT,
+                        featureReduction: {
+                            type: "cluster"
+                        },
+                        outFields: ["*"],
+                        infoTemplate: nprArtistInfoTemplate
+                    }); 
+                    nprArtistsLayer.disableFeatureReduction()
+                    map.addLayer(nprArtistsLayer);
+
+                 
+                   var seenShowsId = 'shows-editable';
+                   var showsInfoTemplate = new InfoTemplate("Seen Shows", "<strong>Artist/Band Name:</strong> ${title} <br> <strong>Venue:</strong> ${venue} <br><strong>Rating:</strong> ${rating}")
+                   showsLayer = new FeatureLayer(showsPeopleHaveSeen , {
+                        "opacity": 0.9,
+                        id: seenShowsId,
+                        mode: FeatureLayer.MODE_SNAPSHOT,
+                        outFields: ["*"],
+                        infoTemplate: showsInfoTemplate
+                    });
+                    showsLayer.setEditable(true);
+                    map.addLayer(showsLayer);
 
 
-					var blocksID = "travis-county-blocks";
-					travisCountyBlocksLyr  = new DynamicMapService(blockGroupService, {
-						"id": blocksID, 
-						"opacity": .6,
-					});
-					map.addLayer(travisCountyBlocksLyr);
+                    var checkBox = new CheckBox({
+                        name: "toggle-clustering",
+                        value: "enabled",
+                        checked: false,
+                        onChange: function(truthy){ 
+                            if(truthy){ //if feature cluster is enabled
+                                if(!nprArtistsLayer.isFeatureReductionActive()){
+                                    nprArtistsLayer.enableFeatureReduction()
+                                }
+                            } else{ // turns off clustering
+                                if (nprArtistsLayer.isFeatureReductionActive()){
+                                    nprArtistsLayer.disableFeatureReduction()
+                                }   
+                            }
+                        }
+                    }, "toggle-clustering").startup();
 
-					bufferLayer = new esri.layers.GraphicsLayer();
-					bufferLayer.spatialReference = {wkid: 102100};
-					map.addLayer(bufferLayer);
-				}
+                    var goToArcGISbtn = new Button({
+                        label: "Record the shows you've seen!",
+                        onClick: function(){
+                            goToArcGIS();
+                        }
+                    }, "editInArcGIS").startup();
+
+
+
+
+
+
+                    createOverviewmap(map);
+                    fetchArtistInfo(nprSitesService);
+
+                    highlightLayer = new esri.layers.GraphicsLayer();
+					highlightLayer.spatialReference = {wkid: 102100};
+					map.addLayer(highlightLayer);
+
+                    // setTimeout(function(){ initEditor() }, 3000);
+                    
+                    
 				
-				function updateHorizontalLabel() {
-					bufferLabel.innerHTML = horizontalSlider.get("value");
-				}
+                }
 
+                init();
+
+                span.onclick = function() {
+                    modal.style.display = "none";
+                    // domConstruct.destroy = modal;
+                   
+                }
+
+                // When the user clicks anywhere outside of the modal, close it
+                window.onclick = function(event) {
+                    if (event.target == modal) {
+                        // modal.style.display = "none";
+                        domConstruct.destroy = modal;
+                    }
+                }
+
+                
 				function clearGraphics(){
 					map.graphics.clear();
-					bufferLayer.clear();
-
 				}
 
-				function showBuffers(results){ //callback from ExecuteBuffer, stored in array of ParameterValue{dataType, paramName, value}
-	
-						let bufferedResults = results.results[0].value.features;
+                function findArtistLocation(guid){
+                  
+                }
 
-						var symbol = new esri.symbol.SimpleFillSymbol(
-							esri.symbol.SimpleFillSymbol.STYLE_SOLID,
-							new esri.symbol.SimpleLineSymbol(
-							  esri.symbol.SimpleLineSymbol.STYLE_SOLID,
-							  new dojo.Color([0,0,255,0.65]), 2
-							),
-							new dojo.Color([0,0,255,0.35])
-						);
+                function zoomToArtist(context){
+                    let artistGUID = context.attributes[4].nodeValue;
+                    geometry = artistGeometryObject[artistGUID]; //used to have let, maybe hoisting was causing issues?
+                    let lng = geometry.lng
+                    let lat = geometry.lat
+                    var location = new Point([lng,lat],new SpatialReference({ wkid:4326 }));
+                    map.centerAndZoom(location, 10);
+                    console.log('zoooooooomin');
+                }
+                
+            });
 
-						dojo.forEach(bufferedResults, function(res) {
-							let geom = res.geometry;
-							// let graphic = new esri.Graphic(geometry,symbol);
-							let pop2010 = res.attributes.POP2010;
-							let attr = {"Population": pop2010}
-							let bufferInfoTemplate = new InfoTemplate( 
-								"Population in the buffer zone", 
-								"Total Population: ${Population}"
-							);					
-							let graphic = new Graphic(geom,symbol,attr,bufferInfoTemplate);
+    </script>
 
-							bufferLayer.add(graphic);
-						});
+    <body class="claro">
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <img id='intro-image' src='https://media.npr.org/assets/img/2018/08/06/npr_tdconcerts_podcasttile_video_sq-b6365c34821ed5be5eb8668a7ca1583e3d7ceb51.jpg?f=thumbnail%22'>
+                <p>This Map-Centric Web Application is designed to visualize the NPR Tiny Desk Series. You can......</p>
+                <ol>
+                    <li>View Artists Hometown/Origin</li>
+                    <li>Link to Artists Tiny Desk Sessions</li>
+                    <li>Search for Artists by location</li>
+                </ol>
+            </div>        
+        </div>
+        <div class="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline',gutters:false">
+            <div id="title-wrapper" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
+                <img class='image' id="logo" src='https://media.npr.org/assets/img/2013/06/19/color-logo-in-square-01_wide-9761a9419cd1b3478cbe493a7b83f9908f989d8e.jpg'>  
+                <div class='title-item' id="logo-description"> <h1>NPR Tiny Desk Acts</h1></div>
+            </div>
+            <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
+                <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">            
+                    <div class="tabOptions" id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Tiny Desk Artists">
+                        <div id="artist-selection" data-dojo-type="dijit/layout/ContentPane" title="Map Options"></div>               
+                        <div id="artist-toc-items" data-dojo-type="dijit/layout/ContentPane"></div>   
+                    </div>
+                    <div class="tabOptions"  id="mapLegend" data-dojo-type="dijit/layout/ContentPane" title="Search By">
+                        <div id="editInArcGIS-wrapper">
+                            <h2>Search/Edit Functionality</h2>
+                        </div>
+                        <div class="edit-query-wrapper">
+                            <div class="edit-query-wrapper" id="artist-Choices" data-dojo-type="dijit/layout/ContentPane" title="Map Options">Zoom to Artist/Band Origin</div>
+                        </div>
+                        <!-- <div id="toggle-clustering-container">
+                            <input id="toggle-clustering" /> <label for="toggle-clustering">Enable Clustering</label>
+                        </div>  -->
+                        <div class="edit-query-wrapper">
+                            <input id="toggle-clustering" /> <label for="toggle-clustering">Enable Clustering</label>
+                        </div> 
+                        <div id="templateDiv"></div>
+                        <div id="editorDiv"></div>
+                        <div class='edit-query-wrapper'>
+                            <button id="editInArcGIS" type="button"></button>
+                        </div>
+                        <div id="editInArcGIS-wrapper">
+                            <h2>Related Links</h2>
+                        </div>
+                        <div class="wrapper">
+                            <div id="editInArcGIS-wrapper">
+                                    <a class="related-links" href="https://www.npr.org/music/" target="_blank">
+                                        <img src="https://media.npr.org/chrome_svg/music-logo-dark.svg" class="music-logo" alt="NPR Music">
+                                        <img src="https://media.npr.org/chrome_svg/music-logo-light.svg" class="music-logo-alt" alt="NPR Music">
+                                    </a>
+                            </div>
+                            <div id="editInArcGIS-wrapper">
+                                <a class="related-links" href="https://www.npr.org/series/tiny-desk-concerts/" target="_blank">
+                                    <img src="https://media.npr.org/branding/series/tiny-desk-concerts/branding_icon-8e6e8d1e178575d577834703dad8a23d96c1bab0.png" alt="Tiny Desk" title="Intimate video performances, recorded live at the desk of All Songs Considered w/ host Bob Boilen">  
+                                </a>
+                            </div>
+                        
+                        </div>
 
-				}
-
-				function executeBuffer(){
-
-					bufferLayer.clear();
-					let graphicsLength = map.graphics.graphics.length; 
-					let inputGraphics = map.graphics.graphics;			
-
-					if (graphicsLength >= 1){
-
-						let sliderValue = horizontalSlider.value; 
-
-						if (sliderValue !== 0){
-
-							console.log("Executing Buffer.");
-
-							var bufferGPtask = new Geoprocessor(populationService);
-							bufferGPtask.setOutputSpatialReference(map.spatialReference);
-							bufferGPtask.setProcessSpatialReference(map.spatialReference);
-							
-						
-							console.log("Value for buffer should be" + sliderValue)
-							var bufferDistanceValue = new LinearUnit();
-							bufferDistanceValue.distance = Number(sliderValue); 
-							bufferDistanceValue.units = 'esriKilometers';
-
-							let inputFeatures = new FeatureSet();
-							inputFeatures.features = inputGraphics
-
-							let inputParameters = {
-								Input_Locations: inputFeatures , 
-								Distance: bufferDistanceValue, 
-							};
-
-							bufferGPtask.execute(inputParameters);
-
-							bufferGPtask.on("execute-complete", showBuffers);
-						}
-					}
-
-					else{
-						alert("You don't have geocoded addresses for buffering");
-					}
-					
-				}
-
-				function addResults(candidateLength, results){
-				
-					let geocodeScoreMinimum = 80; //values equal or under will be removed
-					let extents = [];
-					let validCandidates = 0; 
-					for( var i = 0; i < results.length; i++){//removes score under the geocode score threshold
-						let currentAddressResult = results[i];
-						let currentScore = currentAddressResult.score;
-				
-						if (currentScore > geocodeScoreMinimum) {
-							validCandidates += 1;
-							// 1. set point
-							// 2. set simple marker symbol
-							// 3. set attributes
-							// 4. set infotemplate
-							let x = currentAddressResult.location.x;
-							let y = currentAddressResult.location.y;
-							extents.push(currentAddressResult.location);
-
-							let pt = new Point(x,y, map.spatialReference); // #1
-
-							let sms = new SimpleMarkerSymbol().setStyle( // #2
-								SimpleMarkerSymbol.STYLE_SQUARE).setColor(
-									new Color([255,0,0,0.5])
-								)
-							let attr = {"Address": currentAddressResult.address,"Score": currentScore}; // #3
-
-							var infoTemplate = new InfoTemplate( 
-								"Location", 
-								"Address: ${Address}<br />Score: ${Score}"
-							);
-
-							let graphic = new Graphic(pt,sms,attr,infoTemplate);
-
-							map.graphics.add(graphic);
-
-						}
-						else{
-							continue; //continue if score is not met
-						}
-
-					}
-					
-					let geocodedAddressesExtent = graphicsUtils.graphicsExtent(map.graphics.graphics)
-					map.setExtent(geocodedAddressesExtent, true);
-					alert(`${validCandidates} out of ${candidateLength} addresses were successfully geocoded!`);
-
-				}
-
-				function geocodeFailure(err){
-					alert('Geocoding did not execute properly! Please rerun!');
-				}
-
-				function executeGeocode	(){
-					clearGraphics();
-					let addressContent = geocodingContents.value;
-					let addressContentLength = addressContent.length;
-					let addressCandidates = [];
-
-					if (addressContentLength >= 1){
-						// console.log(addressContent);
-						let addresses = addressContent.replace(/\r\n/g, "\n").split("\n");
-						let addressCount = addresses.length;
-
-						for (var i = 1; i < addressCount; i++) {
-							let currentAddress = addresses[i];
-							
-							//wanted to use new operator here but property with spaces doesnt work as class property
-							let currentAddressCandidate = {
-							  "OBJECTID": i,
-							  "Single Line Input": currentAddress
-							}
-
-							addressCandidates.push(currentAddressCandidate)
-						}
-
-						var options = {
-							addresses: addressCandidates
-						}
-
-						locator.outSpatialReference = map.spatialReference;
-						locator.addressesToLocations(options, addResults.bind(this, addressCount), geocodeFailure)
-					}
-					else{
-						alert('Please enter at least one address!')
-					}
-					console.log("Executing Geocode.");
-
-				}
-
-				aspect.after(horizontalSlider, "onChange", updateHorizontalLabel, true);
-				updateHorizontalLabel();
-
-				on(query('#buffer-btn'), 'click', function(){
-					executeBuffer();
-				});
-
-				on(query('#geocode-btn'), 'click', function(){
-					executeGeocode();
-				});
-
-				init();
-
-			});
-	
-	</script>
-	
-	<body class="claro">
-		<div class="container" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline',gutters:false">
-			<div id="title-block" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
-				<div id="title"><h2>2010 Population Map of Travis County, Texas</h2></div>
-			</div>
-			<div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
-				<div id="geocoding-container" style="height: 70%;" class="pane-container" data-dojo-type="dijit/layout/ContentPane">             
-					<div id="search-title">Geocoding Addresses</div>   
-					<div id="geocoding-description">
-						Please copy your addresses into the text area below <br>
-						Each address should start in a new line. 
-					</div>
-					<textarea id="geocoding-contents" rows="25" cols="60"></textarea>
-					<button id="geocode-btn" data-dojo-type="dijit/form/Button" type="button">
-						Geocode
-					</button>
-
-
-				</div>
-				<div id="buffer-container" style="height: 30%;" class="pane-container" data-dojo-type="dijit/layout/ContentPane">
-					<div id="search-title">Buffering Locations</div>   
-					<div id="slider-container" style="padding-top: 10px;">
-						<input id="horizontal-slider" type="range" value="0"
-								data-dojo-type="dijit/form/HorizontalSlider"
-								data-dojo-props="
-									minimum: 0,
-									maximum: 5,
-									showButtons: false,
-									discreteValues: 6">
-						<div data-dojo-type="dijit/form/HorizontalRule"
-						data-dojo-props="
-							container: 'bottomDecoration',
-							count: 6"
-							style="height: 5px;">    
-						</div>
-						<ol data-dojo-type="dijit/form/HorizontalRuleLabels"
-							data-dojo-props="
-								container: 'bottomDecoration'"
-							style="height: 1em;">
-							<li>0</li>
-							<li>1</li>
-							<li>2</li>
-							<li>3</li>
-							<li>4</li>
-							<li>5</li>
-						</ol>
-
-						<div style="padding-top: 10px; text-align: center;">Distance: <strong id="bufferValue"></strong> kilometres</div>
-					</div>
-					<button id="buffer-btn" data-dojo-type="dijit/form/Button" type="button">
-						Buffer
-					</button>
-				</div>          
-			</div>
-			<div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
-		</div>
-	</body>
+                   
+                    </div>			
+              </div>        
+            </div>
+            <div id="search"></div>
+            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'">        
+            </div>        
+            <div id="over_map">
+                <div id="popup-wrapper">
+                    <div id="popup" style="display:none"></div>
+                </div>
+            </div>
+                 
+        </div>
+    </body>
 
 </html>
-
-<!-- 
-	// for( var i = 0; i < results.length; i++){ 
-					//    let currentAddressResult = results[i];
-					//    let currentScore = currentAddressResult.score;
-					//    if ( currentScore <= geocodeScoreMinimum) {
-					//      results.splice(i, 1); 
-					//      i--;
-					//    }
-					// } 
-
-
-
-
-	//travisCountyBlocksLyr.setVisibleLayers([0]);      -- multilayer methods  
-					//map.addLayers([travisCountyBlocksLyr]);
-
-
-
-					// var horizontalSlider = new HorizontalSlider({labels: ["0", "1", "2", "3", "4", "5"]}, "horizontal-slider"); -- programatic standup not declarative
-					// var horizontalSlider = new HorizontalSlider({discreteValues: 6, showButtons: false}, "horizontal-slider").startup();
-				  
-
-
-
-	let graphic = new esri.Graphic(geometry,symbol);
-							graphic.attr = 
-							let bufferInfoTemplate = new InfoTemplate( 
-								"Population in the buffer zone", 
-								"Total Population: ${population}"
-							);
-							graphic.setInfoTemplate(bufferInfoTemplate);
-							
-							let graphic = new Graphic(pt,sms,attr,infoTemplate);
-
-
-					-->
