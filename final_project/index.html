@@ -23,15 +23,63 @@ div {
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
 
+.wrapper{
+
+    align-items: center;
+    justify-content: center;
+}
+
+
+
+.edit-query-wrapper{
+    padding:10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#toggle-clustering{
+    padding: 10px;
+}
+
 #popup{
-    height: 40px;
-    margin: 30px;
-    background-color: white;
-    opacity: 0.7;
     position: fixed;
     bottom: 25px;
-    left: 650px;
+    left: 670px;
+    line-height: 20px;
     text-align: center;
+    background-color: white;
+}
+
+#popup-container{
+    position: fixed;
+    background-color: white;
+    height: 20px;
+    line-height: 20px;
+    width: 150px;
+    margin: 30px;
+    left: 650px;
+    bottom: 25px;
+    opacity: 0.95;
+    border: 1px solid #666;
+ }
+
+.related-links{
+    width: 100px;
+    padding: 25px;
+
+}
+
+/* https://stackoverflow.com/questions/7560832/how-to-center-a-button-within-a-div */
+ #editInArcGIS-wrapper{ 
+     display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 2px dashed #4067B2;
+    padding: 10px
+}
+#editInArcGIS{
+    
 }
 
 .tabOptions{
@@ -109,7 +157,7 @@ html, body, .container, #map {
 .container{
     position: relative;
 }
-#over_map { position: absolute; top: 10px; left: 320px; z-index: 99; }
+#over_map { position: absolute; top: 10px; left: 320px; z-index: 99; padding-top: 15px;}
 
 .esriLayer{
 background-color: #fff;
@@ -207,7 +255,13 @@ padding:10px 20px; width:100%; text-align:center;}
 
 
 
-
+#search {
+    display: block;
+    position: absolute;
+    z-index: 888;
+    top: 110px;
+    left: 700px;
+}
 
 
 
@@ -257,6 +311,13 @@ padding:10px 20px; width:100%; text-align:center;}
                 "esri/SpatialReference",
                 "esri/renderers/HeatmapRenderer",
                 "dijit/form/CheckBox",
+                "esri/symbols/SimpleMarkerSymbol",
+                "esri/Color",
+                "esri/graphic",
+                "esri/dijit/Search",
+                "esri/dijit/editing/Editor",
+				"esri/dijit/editing/TemplatePicker",
+                "dijit/form/Button",
                 "dijit/_WidgetBase", //start undeclared
                 "dijit/layout/BorderContainer",
                 "dijit/layout/ContentPane",
@@ -291,9 +352,19 @@ padding:10px 20px; width:100%; text-align:center;}
                 Point,
                 SpatialReference,
                 HeatmapRenderer,
-                CheckBox
+                CheckBox,
+                SimpleMarkerSymbol,
+                Color,
+                Graphic,
+                Search,
+                Editor,
+                TemplatePicker,
+                Button
             ) {
                  
+               
+                parser.parse();
+
                 var map,
                     OverviewMap,
                     mapLayers,
@@ -301,16 +372,14 @@ padding:10px 20px; width:100%; text-align:center;}
                     artistOptions,
                     artistLookupObject,
                     artistGeometryObject, 
-                    artistOptionsWidget;
-
-                parser.parse();
-
-                function toggleClustering(){
-                    console.log(context);
-                }
+                    highlightLayer,
+                    artistGeomRef,
+                    artistOptionsWidget,
+                    showsLayer;
 
                 const agsURL = 'http://54.147.1.38:6080/arcgis/rest/services';
                 const nprSitesService = agsURL + '/nprTinyDesk/FeatureServer/0';
+                const showsPeopleHaveSeen = agsURL + '/MyMapService2/FeatureServer/0' //server was having crazy issues publishing and finally published with simple service name. 
                 const nprMapService = 'http://54.147.1.38:6080/arcgis/rest/services/nprTinyDesk/MapServer'
                 artistLookupObject = {};
                 artistGeometryObject = {};
@@ -318,7 +387,228 @@ padding:10px 20px; width:100%; text-align:center;}
                 var modal = document.getElementById('myModal');
                 var btn = document.getElementById("myBtn");
                 var span = document.getElementsByClassName("close")[0];
-               
+                
+                function initEditor(evt) {
+	
+                    var layerInfos = [{featureLayer: showsLayer}];
+                    
+                    var settings = {
+                        map: map,
+                        layerInfos: layerInfos,
+                        toolbarVisible: true
+                    }
+                    
+                    var params = {settings: settings};
+                    editor = new Editor(params, "editorDiv");
+                    editor.startup();
+
+                    var templatePicker = new TemplatePicker({
+                        featureLayers: showsLayer,
+                        grouping: true,
+                        rows: "auto",
+                        columns: 1
+                    }, "templateDiv");
+                    templatePicker.startup();
+
+            }    
+
+                function goToArcGIS(){
+                    //Intended to open edit session in new arcmap session
+                    let mapZoom = map.getZoom();
+                    let mapCenter = map.extent.getCenter();
+
+                    let x = mapCenter.getLongitude();
+                    let y = mapCenter.getLatitude();
+                    var arcgisonlineurl= "http://www.arcgis.com/home/webmap/viewer.html?&center="+x +","+ y+"&level="+mapZoom+"&urls="+showsPeopleHaveSeen;
+                    window.open(arcgisonlineurl, '_blank');
+                }
+
+
+                function highlightArtist(newValue){
+				        clearGraphics();
+                        
+                        let artistReference = artistLookupObject;
+                        let geometryLookup = artistGeometryObject;
+                        let artistCurrent = artistReference[newValue];
+                        let id = artistCurrent.guid_;
+                        geometry = geometryLookup[id];
+
+                        var sr = new SpatialReference(4326);
+                        let pt = new Point(geometry.lng, geometry.lat, sr); 
+                        // let pt = new Point(geometry.lng, geometry.lat, map.spatialReference); 
+                        let sms = new SimpleMarkerSymbol().setStyle(
+                            SimpleMarkerSymbol.STYLE_SQUARE).setColor(
+                                new Color([255,0,0,0.5])
+                            )    
+                        
+                        sms.setSize("30");
+
+                        let attr = {"Artist/Act":  artistCurrent.title, "Location": artistCurrent.location, "Description": artistCurrent.description}
+                        var infoTemplate = new InfoTemplate( 
+                            "Highlighted Artist", 
+                            "Artist/Act: ${location}<br /> Description: ${description}"
+                        );
+                        let graphic = new Graphic(pt,sms,attr,infoTemplate);
+                        map.graphics.add(graphic);
+                }
+
+                function createOverviewmap(map){
+                        overviewMap = new OverviewMap({
+                        map: map,
+                        visible: true
+                        });
+                        overviewMap.startup();
+				    }
+
+                function fetchArtistInfo(nprSitesService){
+                    //Responsible for querying feature service and returning guid, name, screenshot img
+                    // could have used this, https://developers.arcgis.com/javascript/latest/api-reference/esri-tasks-support-Query.html#returnDistinctValues
+                    var queryTask = new QueryTask(nprSitesService);
+                    var query = new esriQuery();
+                    query.returnGeometry = true;
+                    query.outFields = ["title","description", "pubDate", "guid_", "imgLink", "actURL", "NEAR_DIST"];
+                    query.where = "1=1"
+                    queryTask.execute(query,createArtistTOC); 
+                    console.log("Executed");
+                }
+                
+                function createArtistTOC(artistInfoResponse){
+                    //Responsible for parsing response from feature service endpoint and rendering TOC items
+                    
+                    function __getValues__(response) {
+                        var features = response.features;
+                        var values = features.map(function (feature) {
+                            return feature.attributes.SUB_REGION;
+                        });
+                        return values;
+                    }
+
+                    let artistRecords = artistInfoResponse.features;
+                    let artistOptionsArray = []
+                    for (i = 0; i < artistRecords.length; i++) { 
+                        let actName = artistRecords[i].attributes.title;
+                        let actGUID = artistRecords[i].attributes.guid_;
+                        artistLookupObject[actName] = artistRecords[i].attributes;
+                        artistGeometryObject[actGUID] = {lat: artistInfoResponse.features[i].geometry.y, lng: artistInfoResponse.features[i].geometry.x }
+                        let item = {id:actName, value: actGUID};
+                        artistOptionsArray.push(item)
+                    }
+                    artistLookupReference = artistLookupObject;
+                    
+
+                    // artistOptionsArray = __getValues__(artistInfoResponse) // old array getter
+
+                    artistOptionsArray.sort(function(a, b) {
+                        var textA = a.id.toUpperCase();
+                        var textB = b.id.toUpperCase();
+                        return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+                    });
+
+                    let artistOptionsStore = new Memory({
+                        data: artistOptionsArray
+                    });
+
+                    artistOptions = new FilteringSelect({
+                        name: "artist-Selection",
+                        id: "artistSelection",
+                        value: "Dan Auerbach",
+                        store: artistOptionsStore, 
+                        searchAttr: "id"     //SUPER ANNOYING! Id was the fix but label would cause this to break, schema specific
+                    });
+                    artistOptions.placeAt("artist-Choices");
+
+                    artistOptions.on('change', function(newValue){
+                        console.log('eyyyyyyyy we supposed to zoom to a specific person');
+                        let actGUID = artistLookupObject[newValue].guid_;
+                        let geometry = artistGeometryObject[actGUID];
+                        let lng = geometry.lng
+                        let lat = geometry.lat
+                        let zoomToSpot = new Point([lng,lat],new SpatialReference({ wkid:4326 }));
+                        map.centerAndZoom(zoomToSpot, 10);
+                    })
+
+                    for (var key in artistLookupReference) {
+                        let artist = key; 
+                        let attributes = artistLookupReference[artist];
+                        let title = attributes.title;
+                        let description = attributes.description;
+                        let pubDate = attributes.pubDate;
+                        let guid = attributes.guid_;
+                        let imgLink = attributes.imgLink;
+                        let dlLink = attributes.actURL;
+                        if (attributes.NEAR_DIST == 0){ //if vertex is in same place, set property to flag as true. 
+                            attributes.sharedLoc = true;
+                        }
+                        else{
+                            attributes.sharedLoc = true;
+                        }
+                        createTOCItem(title, description, guid, imgLink,dlLink )
+                    }
+
+
+                }
+                            
+                function createTOCItem(title, description, guid, imgLink, download_link){
+                    
+                    function __updateQueryStringParameter__(uri, key, value) {
+                        // https://stackoverflow.com/questions/5999118/how-can-i-add-or-update-a-query-string-parameter
+                        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+                        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+                        if (uri.match(re)) {
+                            return uri.replace(re, '$1' + key + "=" + value + '$2');
+                        }
+                        else {
+                            return uri + separator + key + "=" + value;
+                        }
+                    }
+
+                    //Responsible for creating the actual dom elements in the TOC/Grid
+                    var parentDiv = document.createElement("div");
+                        parentDiv.classList.add("artist-toc"); //used to be gallery
+                        
+                        var childLink = document.createElement("div"); //"a"
+
+                        imgLink = __updateQueryStringParameter__(imgLink, 's', 100);
+                        childThumbnail = document.createElement('img')
+                            childThumbnail.setAttribute('src', imgLink);
+                            childThumbnail.setAttribute('alt', description);
+                            childThumbnail.setAttribute('title', description);
+                            childThumbnail.setAttribute('name', title);
+                            childThumbnail.setAttribute('guid', guid);
+                            childThumbnail.setAttribute('width', 100);
+                            childThumbnail.setAttribute('height', 100);
+                        
+                        childThumbnail.onmouseover= function(){
+                            let artistName = this.name;
+                            highlightArtist(artistName);
+                            let popup = document.getElementById("popup");
+                            popup.style.display = "block"; 
+                            popup.innerHTML = artistName;
+
+
+
+                        }
+                        childThumbnail.onmouseout= function(){
+                            let popup = document.getElementById("popup");
+                            popup.style.display = "none";
+                            clearGraphics()
+                        }
+
+                        childThumbnail.onclick = function(){
+                            zoomToArtist(this);
+                        }    
+
+
+                        childLink.appendChild(childThumbnail);
+                        parentDiv.appendChild(childLink);
+                        var childDiv = document.createElement("div"); 
+                            childDiv.classList.add("desc");
+                            childDiv.innerHTML = name;
+
+                        parentDiv.appendChild(childDiv);
+                        document.getElementById("artist-toc-items").appendChild(parentDiv); 
+                }
+                                    
 				function init(){     
                     
                     modal.style.display = "block"
@@ -327,36 +617,17 @@ padding:10px 20px; width:100%; text-align:center;}
 						center: [-100.0850508, 41.647463],
 						zoom: 3
                 	});   
+                    // map.on("layers-add-result", initEditor); no idea why this won't work
 
-                    // var nprArtists = "npr-artists";
-                    // nprArtistsLayer  = new DynamicMapService(nprSitesService, {
-                    //     "id": nprArtists, 
-                    //     "opacity": .9,
-                    // });
+                    var search = new Search({
+                        map: map
+                    }, "search");
+                    search.startup();
 
 					var nprArtists = 'npr-artists'
 
                     var nprArtistInfoTemplate = new InfoTemplate("NPR Act", "<strong>Artist/Band Name:</strong> ${title} <br> <strong>Location:</strong> ${location} <br> <strong>Description:</strong> ${description} <br> <strong>Session Release Date:</strong> ${pubDate} <br> <strong>Direct Download Link:</strong> <a href=${actURL}>Direct DL</a>")
 
-
-
-                    // var heatmapFeatureLayerOptions = {
-                    //     mode: FeatureLayer.MODE_SNAPSHOT,
-                    //     infoTemplate: nprArtistInfoTemplate,
-                    //     outFields: [
-                    //         "title",
-                    //         "location",
-                    //         "description",
-                    //         "pubDate",
-                    //         "actURL",
-                    //         "guid_"
-                    //     ]
-                    //     };
-                    //     var heatmapFeatureLayer = new FeatureLayer(nprSitesService, heatmapFeatureLayerOptions);
-                    //     var heatmapRenderer = new HeatmapRenderer();
-                    //     heatmapFeatureLayer.setRenderer(heatmapRenderer);
-                    //     map.addLayer(heatmapFeatureLayer);
-      
                     nprArtistsLayer = new FeatureLayer(nprSitesService , {
                         "opacity": 0.9,
                         id: nprArtists,
@@ -370,154 +641,20 @@ padding:10px 20px; width:100%; text-align:center;}
                     nprArtistsLayer.disableFeatureReduction()
                     map.addLayer(nprArtistsLayer);
 
-                    function createOverviewmap(map){
-                        overviewMap = new OverviewMap({
-                        map: map,
-                        visible: true
-                        });
-                        overviewMap.startup();
-				    }
-
-                    function fetchArtistInfo(nprSitesService){
-                        //Responsible for querying feature service and returning guid, name, screenshot img
-                        // could have used this, https://developers.arcgis.com/javascript/latest/api-reference/esri-tasks-support-Query.html#returnDistinctValues
-                        var queryTask = new QueryTask(nprSitesService);
-                        var query = new esriQuery();
-                        query.returnGeometry = true;
-                        query.outFields = ["title","description", "pubDate", "guid_", "imgLink", "actURL", "NEAR_DIST"];
-                        query.where = "1=1"
-                        queryTask.execute(query,createArtistTOC); 
-                        console.log("Executed");
-                    }
-                    
-                    function createArtistTOC(artistInfoResponse){
-                        //Responsible for parsing response from feature service endpoint and rendering TOC items
-                        
-                        function __getValues__(response) {
-                            var features = response.features;
-                            var values = features.map(function (feature) {
-                                return feature.attributes.SUB_REGION;
-                            });
-                            return values;
-                        }
-
-                        let artistRecords = artistInfoResponse.features;
-                        let artistOptionsArray = []
-                        for (i = 0; i < artistRecords.length; i++) { 
-                            let actName = artistRecords[i].attributes.title;
-                            let actGUID = artistRecords[i].attributes.guid_;
-                            artistLookupObject[actName] = artistRecords[i].attributes;
-                            artistGeometryObject[actGUID] = {lat: artistInfoResponse.features[i].geometry.y, lng: artistInfoResponse.features[i].geometry.x }
-                            let item = {label:actName, value: actGUID};
-                            artistOptionsArray.push(item)
-                        }
-                        artistLookupReference = artistLookupObject;
-
-                        // artistOptionsArray = __getValues__(artistInfoResponse) // old array getter
-
-                        artistOptionsArray.sort(function(a, b) {
-                            var textA = a.label.toUpperCase();
-                            var textB = b.label.toUpperCase();
-                            return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
-                        });
-
-                        let artistOptionsStore = new Memory({
-                            data: artistOptionsArray
-                        });
-
-                        artistOptions = new FilteringSelect({
-                            name: "artist-Selection",
-                            id: "artistSelection",
-                            value: "Dan Auerbach",
-                            store: artistOptionsStore,
-                            searchAttr: "label"
-                        });
-                        artistOptions.placeAt("artist-Choices");
-                        
-                        // artistOptions.on('change', function(evt){
-                        //     console.log(evt);
-                        // });
-                        artistOptions.startup(); 
+                 
+                   var seenShowsId = 'shows-editable';
+                   var showsInfoTemplate = new InfoTemplate("Seen Shows", "<strong>Artist/Band Name:</strong> ${title} <br> <strong>Venue:</strong> ${venue} <br><strong>Rating:</strong> ${rating}")
+                   showsLayer = new FeatureLayer(showsPeopleHaveSeen , {
+                        "opacity": 0.9,
+                        id: seenShowsId,
+                        mode: FeatureLayer.MODE_SNAPSHOT,
+                        outFields: ["*"],
+                        infoTemplate: showsInfoTemplate
+                    });
+                    showsLayer.setEditable(true);
+                    map.addLayer(showsLayer);
 
 
-                        for (var key in artistLookupReference) {
-                            let artist = key; 
-                            let attributes = artistLookupReference[artist];
-                            let title = attributes.title;
-                            let description = attributes.description;
-                            let pubDate = attributes.pubDate;
-                            let guid = attributes.guid_;
-                            let imgLink = attributes.imgLink;
-                            let dlLink = attributes.actURL;
-                            if (attributes.NEAR_DIST == 0){ //if vertex is in same place, set property to flag as true. 
-                                attributes.sharedLoc = true;
-                            }
-                            else{
-                                attributes.sharedLoc = true;
-                            }
-                            
-                            createTOCItem(title, description, guid, imgLink,dlLink )
-                        }
-
-
-                    }
-                             
-                    function createTOCItem(title, description, guid, imgLink, download_link){
-                        
-                        function __updateQueryStringParameter__(uri, key, value) {
-                            // https://stackoverflow.com/questions/5999118/how-can-i-add-or-update-a-query-string-parameter
-                            var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
-                            var separator = uri.indexOf('?') !== -1 ? "&" : "?";
-                            if (uri.match(re)) {
-                                return uri.replace(re, '$1' + key + "=" + value + '$2');
-                            }
-                            else {
-                                return uri + separator + key + "=" + value;
-                            }
-                        }
-
-                        //Responsible for creating the actual dom elements in the TOC/Grid
-                        var parentDiv = document.createElement("div");
-                            parentDiv.classList.add("artist-toc"); //used to be gallery
-                            
-                            var childLink = document.createElement("div"); //"a"
-
-                            imgLink = __updateQueryStringParameter__(imgLink, 's', 100);
-                            childThumbnail = document.createElement('img')
-                                childThumbnail.setAttribute('src', imgLink);
-                                childThumbnail.setAttribute('alt', description);
-                                childThumbnail.setAttribute('title', description);
-                                childThumbnail.setAttribute('name', title);
-                                childThumbnail.setAttribute('guid', guid);
-                                childThumbnail.setAttribute('width', 100);
-                                childThumbnail.setAttribute('height', 100);
-                            
-                            childThumbnail.onmouseover= function(){
-                                let artistName = this.name;
-                                let popup = document.getElementById("popup");
-                                popup.style.display = "block"; 
-                                popup.innerHTML = artistName;
-                            }
-                            childThumbnail.onmouseout= function(){
-                                let popup = document.getElementById("popup");
-                                popup.style.display = "none";
-                            }
-
-                            childThumbnail.onclick = function(){
-                                zoomToArtist(this);
-                            }    
-
-
-                            childLink.appendChild(childThumbnail);
-                            parentDiv.appendChild(childLink);
-                            var childDiv = document.createElement("div"); 
-                                childDiv.classList.add("desc");
-                                childDiv.innerHTML = name;
-
-                            parentDiv.appendChild(childDiv);
-                            document.getElementById("artist-toc-items").appendChild(parentDiv); 
-                    }
-                                        
                     var checkBox = new CheckBox({
                         name: "toggle-clustering",
                         value: "enabled",
@@ -535,6 +672,12 @@ padding:10px 20px; width:100%; text-align:center;}
                         }
                     }, "toggle-clustering").startup();
 
+                    var goToArcGISbtn = new Button({
+                        label: "Record the shows you've seen!",
+                        onClick: function(){
+                            goToArcGIS();
+                        }
+                    }, "editInArcGIS").startup();
 
 
 
@@ -542,9 +685,16 @@ padding:10px 20px; width:100%; text-align:center;}
 
 
                     createOverviewmap(map);
-
-               
                     fetchArtistInfo(nprSitesService);
+
+                    highlightLayer = new esri.layers.GraphicsLayer();
+					highlightLayer.spatialReference = {wkid: 102100};
+					map.addLayer(highlightLayer);
+
+                    // setTimeout(function(){ initEditor() }, 3000);
+                    
+                    
+				
                 }
 
                 init();
@@ -563,15 +713,18 @@ padding:10px 20px; width:100%; text-align:center;}
                     }
                 }
 
+                
+				function clearGraphics(){
+					map.graphics.clear();
+				}
+
                 function findArtistLocation(guid){
                   
                 }
 
                 function zoomToArtist(context){
                     let artistGUID = context.attributes[4].nodeValue;
-                    console.log(context.attributes[0].nodeValue)
-                    console.log(artistGUID)
-                    let geometry = artistGeometryObject[artistGUID];
+                    geometry = artistGeometryObject[artistGUID]; //used to have let, maybe hoisting was causing issues?
                     let lng = geometry.lng
                     let lat = geometry.lat
                     var location = new Point([lng,lat],new SpatialReference({ wkid:4326 }));
@@ -579,15 +732,12 @@ padding:10px 20px; width:100%; text-align:center;}
                     console.log('zoooooooomin');
                 }
                 
-               
-
             });
 
     </script>
 
     <body class="claro">
         <div id="myModal" class="modal">
-            <!-- Modal content -->
             <div class="modal-content">
                 <span class="close">&times;</span>
                 <img id='intro-image' src='https://media.npr.org/assets/img/2018/08/06/npr_tdconcerts_podcasttile_video_sq-b6365c34821ed5be5eb8668a7ca1583e3d7ceb51.jpg?f=thumbnail%22'>
@@ -607,19 +757,50 @@ padding:10px 20px; width:100%; text-align:center;}
             <div id="table-of-contents" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left'">
                 <div id="navBar" data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region: 'left'" style="width:20%">            
                     <div class="tabOptions" id="mapChoices" data-dojo-type="dijit/layout/ContentPane" title="Tiny Desk Artists">
-                        <div id="artist-selection" data-dojo-type="dijit/layout/ContentPane" title="Map Options"></div>
-                        
+                        <div id="artist-selection" data-dojo-type="dijit/layout/ContentPane" title="Map Options"></div>               
                         <div id="artist-toc-items" data-dojo-type="dijit/layout/ContentPane"></div>   
                     </div>
                     <div class="tabOptions"  id="mapLegend" data-dojo-type="dijit/layout/ContentPane" title="Search By">
-                        <div id="artist-Choices" data-dojo-type="dijit/layout/ContentPane" title="Map Options">Please select an Artist</div>
-                        <div id="toggle-clustering-container">
-                            <!-- <input type='checkbox' class='boolean-toggle' id='toggle-clustering' onclick="togglevalue=0 />  -->
+                        <div id="editInArcGIS-wrapper">
+                            <h2>Search/Edit Functionality</h2>
+                        </div>
+                        <div class="edit-query-wrapper">
+                            <div class="edit-query-wrapper" id="artist-Choices" data-dojo-type="dijit/layout/ContentPane" title="Map Options">Zoom to Artist/Band Origin</div>
+                        </div>
+                        <!-- <div id="toggle-clustering-container">
+                            <input id="toggle-clustering" /> <label for="toggle-clustering">Enable Clustering</label>
+                        </div>  -->
+                        <div class="edit-query-wrapper">
                             <input id="toggle-clustering" /> <label for="toggle-clustering">Enable Clustering</label>
                         </div> 
+                        <div id="templateDiv"></div>
+                        <div id="editorDiv"></div>
+                        <div class='edit-query-wrapper'>
+                            <button id="editInArcGIS" type="button"></button>
+                        </div>
+                        <div id="editInArcGIS-wrapper">
+                            <h2>Related Links</h2>
+                        </div>
+                        <div class="wrapper">
+                            <div id="editInArcGIS-wrapper">
+                                    <a class="related-links" href="https://www.npr.org/music/" target="_blank">
+                                        <img src="https://media.npr.org/chrome_svg/music-logo-dark.svg" class="music-logo" alt="NPR Music">
+                                        <img src="https://media.npr.org/chrome_svg/music-logo-light.svg" class="music-logo-alt" alt="NPR Music">
+                                    </a>
+                            </div>
+                            <div id="editInArcGIS-wrapper">
+                                <a class="related-links" href="https://www.npr.org/series/tiny-desk-concerts/" target="_blank">
+                                    <img src="https://media.npr.org/branding/series/tiny-desk-concerts/branding_icon-8e6e8d1e178575d577834703dad8a23d96c1bab0.png" alt="Tiny Desk" title="Intimate video performances, recorded live at the desk of All Songs Considered w/ host Bob Boilen">  
+                                </a>
+                            </div>
+                        
+                        </div>
+
+                   
                     </div>			
               </div>        
             </div>
+            <div id="search"></div>
             <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'">        
             </div>        
             <div id="over_map">
